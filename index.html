@@ -659,11 +659,47 @@ function searchMultipleProductsSupabase(barcodes, tomorrowMode) {
 
 // ── 2) ค้นหารูปจาก OCR ────────────────────────────────
 function searchDriveImageSupabase(keyword) {
-  var tokens = keyword.trim().split(/\s+/).filter(function(t) { return t.length > 0; });
-  if (tokens.length === 0) return Promise.resolve({ success: true, usedFallback: false, files: [] });
+  // ── 1) split & กรอง token ──────────────────────────
+  var UNIT_PATTERN = /^\d+[\w\.%]*$/;          // 300g, 2KG, 180มล, 7มม, 600
+  var UNIT_WORDS   = ["มล","กรัม","กก","มม","kg","g.","g","ml","mm","แพ็คละ","แพ็ค"];
 
-  var threshold = tokens.length <= 2 ? 1 : 2;
-  var orFilter  = tokens.map(function(t) {
+  var filtered = keyword.trim().split(/\s+/).filter(function(t) {
+    if (t.length < 3) return false;                            // สั้นเกิน
+    if (UNIT_PATTERN.test(t)) return false;                    // ตัวเลข+หน่วย
+    if (UNIT_WORDS.indexOf(t.toLowerCase()) !== -1) return false; // คำหน่วย
+    return true;
+  });
+
+  if (filtered.length === 0)
+    return Promise.resolve({ success: true, usedFallback: false, files: [] });
+
+  // ── 2) sliding window สำหรับ token ยาว ─────────────
+  var WINDOW = 7, STEP = 4, LONG = 10;
+  var tokens = [];
+
+  filtered.forEach(function(t) {
+    if (t.length >= LONG) {
+      for (var i = 0; i + WINDOW <= t.length; i += STEP)
+        tokens.push(t.substring(i, i + WINDOW));
+      // เพิ่ม segment ท้ายถ้ายังไม่ครอบคลุม
+      var last = t.substring(t.length - WINDOW);
+      if (tokens.indexOf(last) === -1) tokens.push(last);
+    } else {
+      tokens.push(t);
+    }
+  });
+
+  // dedup
+  tokens = tokens.filter(function(t, i, arr) { return arr.indexOf(t) === i; });
+
+  if (tokens.length === 0)
+    return Promise.resolve({ success: true, usedFallback: false, files: [] });
+
+  // ── 3) threshold: ต้อง match >= 2 เสมอ ยกเว้น token เดียว ──
+  var threshold = tokens.length <= 1 ? 1 : 2;
+
+  // ── 4) OR filter → Supabase ────────────────────────
+  var orFilter = tokens.map(function(t) {
     return 'description.ilike.*' + encodeURIComponent(t) + '*';
   }).join(',');
 
@@ -672,7 +708,9 @@ function searchDriveImageSupabase(keyword) {
   return sbFetch(path).then(function(rows) {
     var matched = rows.filter(function(row) {
       var desc  = (row.description || '').toLowerCase();
-      var count = tokens.filter(function(t) { return desc.indexOf(t.toLowerCase()) !== -1; }).length;
+      var count = tokens.filter(function(t) {
+        return desc.indexOf(t.toLowerCase()) !== -1;
+      }).length;
       return count >= threshold;
     });
 
@@ -681,7 +719,9 @@ function searchDriveImageSupabase(keyword) {
         return {
           thumbnailUrl: 'https://drive.google.com/thumbnail?id=' + row.file_id + '&sz=w800',
           viewUrl:      'https://drive.google.com/file/d/' + row.file_id + '/view',
-          folderUrl:    row.folder_id ? 'https://drive.google.com/drive/folders/' + row.folder_id : null,
+          folderUrl:    row.folder_id
+            ? 'https://drive.google.com/drive/folders/' + row.folder_id
+            : null,
         };
       });
       return { success: true, usedFallback: false, files: files };
@@ -690,10 +730,15 @@ function searchDriveImageSupabase(keyword) {
     // Fallback: คืน folder list
     var folderMap = {};
     rows.forEach(function(row) {
-      if (row.folder_id && !folderMap[row.folder_id]) folderMap[row.folder_id] = row.folder_name;
+      if (row.folder_id && !folderMap[row.folder_id])
+        folderMap[row.folder_id] = row.folder_name;
     });
     var folders = Object.keys(folderMap).map(function(fid) {
-      return { folderId: fid, folderName: folderMap[fid], folderUrl: 'https://drive.google.com/drive/folders/' + fid };
+      return {
+        folderId:  fid,
+        folderName: folderMap[fid],
+        folderUrl: 'https://drive.google.com/drive/folders/' + fid
+      };
     });
     return { success: true, usedFallback: true, folders: folders };
   });
