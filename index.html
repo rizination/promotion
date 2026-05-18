@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ค้นหาโปรโมชั่น</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --blue-dark:  #003a7a;
+      --blue:       #0056b3;
+      --blue-mid:   #1976D2;
+      --blue-light: #d6e9ff;
+      --blue-pale:  #EEF4FB;
+      --sky:        #4FC3F7;
+      --white:      #ffffff;
+      --success:    #00897B;
+      --success-bg: #E0F2F1;
+      --danger:     #D32F2F;
+      --danger-bg:  #FFEBEE;
+      --text:       #1a2a40;
+      --text-muted: #607D8B;
+      --radius:     12px;
+      --shadow:     0 2px 8px rgba(0,86,179,0.10);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--blue-pale);
+      color: var(--text);
+      font-family: 'Sarabun', sans-serif;
+      font-size: 15px;
+      min-height: 100vh;
+    }
+
+    /* ─── Header ─────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 60%, var(--blue-mid) 100%);
+      color: var(--white);
+      padding: 14px 16px 12px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.25);
+    }
+    .header-title { font-size: 18px; font-weight: 800; letter-spacing: 0.5px; }
+    .header-sub   { font-size: 11px; opacity: 0.75; margin-top: 2px; letter-spacing: 1px; text-transform: uppercase; }
+
+    /* ─── Container ──────────────────────────────────── */
+    .container { padding: 14px 12px; max-width: 540px; margin: auto; }
+
+    /* ─── Scan Box ───────────────────────────────────── */
+    .scan-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+    .scan-label { font-size: 12px; font-weight: 700; color: var(--blue); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px; display: block; }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 8px;
+      border: 2px solid #c8daf5;
+      font-size: 16px;
+      font-family: 'Sarabun', sans-serif;
+      background: var(--blue-pale);
+      color: var(--text);
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: var(--blue); outline: none; background: var(--white); }
+
+    .counter-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .counter-badge {
+      background: var(--blue-light);
+      color: var(--blue-dark);
+      font-weight: 800;
+      font-size: 20px;
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .counter-text { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+
+    /* ─── Action Row (Check + Clear) ─────────────────── */
+    .action-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .btn-check {
+      flex: 1;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-mid) 100%);
+      color: var(--white);
+      border: none;
+      padding: 15px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: 'Sarabun', sans-serif;
+      box-shadow: 0 4px 12px rgba(0,86,179,0.3);
+      letter-spacing: 0.3px;
+      transition: opacity 0.15s;
+    }
+    .btn-check:active { opacity: 0.85; }
+
+    .btn-clear {
+      background: var(--white);
+      color: var(--danger);
+      border: 2px solid #ffcdd2;
+      padding: 15px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Sarabun', sans-serif;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn-clear:active { background: var(--danger-bg); }
+
+    /* ─── Quick Search Accordion ─────────────────────── */
+    .search-accordion {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .search-accordion-toggle {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 13px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--blue);
+      letter-spacing: 0.3px;
+    }
+    .search-accordion-toggle:active { background: var(--blue-pale); }
+    .accordion-arrow {
+      font-size: 12px;
+      transition: transform 0.25s;
+      color: var(--text-muted);
+    }
+    .accordion-arrow.open { transform: rotate(180deg); }
+
+    .search-accordion-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .search-accordion-body.open { max-height: 800px; overflow-y: auto;}
+
+    .search-inner {
+      padding: 0 16px 14px;
+      display: flex;
+      gap: 8px;
+    }
+    .search-inner input { flex: 1; }
+    .btn-search-go {
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-mid) 100%);
+      color: var(--white);
+      border: none;
+      padding: 13px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Sarabun', sans-serif;
+      white-space: nowrap;
+    }
+    .btn-search-go:active { opacity: 0.85; }
+
+    /* ─── Summary Bar ────────────────────────────────── */
+    .summary-bar {
+      display: none;
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      border-left: 5px solid var(--blue);
+    }
+    .summary-bar.show { display: flex; align-items: center; gap: 0; }
+    .summary-title { font-size: 11px; font-weight: 700; color: var(--blue); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px; display: block; }
+    .summary-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 11px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .pill-total   { background: var(--blue-light);  color: var(--blue-dark); }
+    .pill-promo   { background: var(--success-bg);  color: var(--success); }
+    .pill-nopromo { background: var(--danger-bg);   color: var(--danger); }
+    .pill-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .pill-total   .pill-dot { background: var(--blue); }
+    .pill-promo   .pill-dot { background: var(--success); }
+    .pill-nopromo .pill-dot { background: var(--danger); }
+
+    /* ─── List Items ─────────────────────────────────── */
+    .list-header {
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      letter-spacing: 0.8px; text-transform: uppercase;
+      margin-bottom: 8px; padding: 0 2px;
+    }
+
+    .list-item {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      box-shadow: var(--shadow);
+      border-left: 5px solid #ccc;
+    }
+    .list-item.has-promo { border-color: var(--success); cursor: pointer; }
+    .list-item.has-promo:active { background: var(--success-bg); }
+    .list-item.no-promo  { border-color: var(--danger); opacity: 0.75; }
+
+    .item-num {
+      min-width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .has-promo .item-num { background: var(--success-bg); color: var(--success); }
+    .no-promo  .item-num { background: var(--danger-bg);  color: var(--danger); }
+
+    .item-body { flex: 1; min-width: 0; }
+    .item-name { font-weight: 700; font-size: 15px; line-height: 1.3; }
+    .item-status { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+    .item-period {
+      font-size: 12px; font-weight: 700; color: var(--blue-mid);
+      background: var(--blue-light); display: inline-block;
+      padding: 2px 8px; border-radius: 4px; margin-top: 5px;
+    }
+    .item-price {
+      font-weight: 800; font-size: 18px; color: var(--success);
+      flex-shrink: 0; padding-top: 2px;
+    }
+    .no-promo .item-price { color: var(--text-muted); font-size: 14px; }
+
+    /* ─── Pagination ─────────────────────────────────── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 14px;
+      padding-bottom: 20px;
+    }
+    .page-btn {
+      min-width: 38px; height: 38px;
+      border-radius: 8px;
+      border: 2px solid var(--blue-light);
+      background: var(--white);
+      color: var(--blue);
+      font-family: 'Sarabun', sans-serif;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: 0.12s;
+    }
+    .page-btn.active { background: var(--blue); color: var(--white); border-color: var(--blue); }
+    .page-btn:disabled { opacity: 0.35; cursor: default; }
+    .page-btn:not(:disabled):not(.active):active { background: var(--blue-light); }
+    .page-info { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+    /* ─── Loading ────────────────────────────────────── */
+    #loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      font-weight: 700;
+      color: var(--blue);
+      font-size: 14px;
+    }
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid var(--blue-light);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Viewer Section ─────────────────────────────── */
+    #viewerSection { display: none; }
+
+    .btn-back {
+      background: var(--white);
+      color: var(--blue);
+      border: 2px solid var(--blue-light);
+      padding: 12px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Sarabun', sans-serif;
+      width: 100%;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .viewer-title {
+      font-size: 16px; font-weight: 800;
+      color: var(--blue-dark);
+      border-bottom: 3px solid var(--blue);
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+    .img-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .img-preview {
+      width: 100%;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      display: block;
+      min-height: 120px;
+      background: var(--blue-pale);
+    }
+    .btn-print {
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-mid) 100%);
+      color: var(--white); border: none;
+      padding: 12px; border-radius: 8px;
+      cursor: pointer; font-size: 14px; font-weight: 700;
+      font-family: 'Sarabun', sans-serif;
+      width: 100%;
+    }
+
+    .fallback-box {
+      background: var(--blue-light);
+      padding: 16px;
+      border-radius: var(--radius);
+      margin-top: 16px;
+      margin-bottom: 20px;
+      border: 1.5px dashed var(--blue);
+    }
+    .fallback-title { font-size: 13px; font-weight: 700; color: var(--blue-dark); margin-bottom: 10px; }
+    .btn-folder {
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-mid) 100%);
+      color: var(--white); border: none;
+      padding: 12px; border-radius: 8px;
+      cursor: pointer; font-size: 14px; font-weight: 700;
+      font-family: 'Sarabun', sans-serif;
+      width: 100%; margin-top: 10px;
+    }
+    .folder-link {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px; background: var(--white);
+      margin-bottom: 6px; border-radius: 8px;
+      text-decoration: none; color: var(--blue);
+      font-weight: 700; font-size: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    /* ─── Tomorrow Mode Toggle ───────────────────────── */
+    .tomorrow-toggle-wrap {
+      margin-bottom: 14px;
+    }
+    .btn-tomorrow {
+      width: 100%;
+      padding: 13px 16px;
+      border-radius: var(--radius);
+      border: 2px solid #e57373;
+      background: var(--white);
+      color: var(--danger);
+      font-family: 'Sarabun', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow);
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-tomorrow.active {
+      background: var(--danger);
+      color: var(--white);
+      border-color: var(--danger);
+    }
+    .tomorrow-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: #ffcdd2;
+      color: var(--danger);
+      letter-spacing: 0.3px;
+    }
+    .btn-tomorrow.active .tomorrow-badge {
+      background: rgba(255,255,255,0.25);
+      color: var(--white);
+    }
+
+    /* ─── Folder Bomb (ท่าไม้ตาย) ──────────────────────── */
+    .folder-bomb-accordion {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+      overflow: hidden;
+      border: 2px solid #ffcdd2;
+    }
+    .folder-bomb-toggle {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 13px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--danger);
+      letter-spacing: 0.3px;
+    }
+    .folder-bomb-toggle:active { background: var(--danger-bg); }
+    .folder-bomb-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease;
+    }
+    .folder-bomb-body.open { max-height: 2000px; }
+    .folder-bomb-inner { padding: 0 16px 14px; }
+    .btn-load-folders {
+      width: 100%;
+      background: linear-gradient(135deg, #c62828 0%, #b71c1c 100%);
+      color: var(--white);
+      border: none;
+      padding: 15px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 800;
+      font-family: 'Sarabun', sans-serif;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 16px rgba(183,28,28,0.45);
+      margin-bottom: 12px;
+      transition: opacity 0.15s;
+    }
+    .btn-load-folders:active { opacity: 0.82; }
+
+    /* ─── Image error placeholder ────────────────────── */
+    .img-error {
+      width: 100%; min-height: 80px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--blue-pale);
+      border-radius: 8px; margin-bottom: 12px;
+      color: var(--text-muted); font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-title">สื่อโปรโมชั่น</div>
+   
+  </div>
+
+  <div class="container">
+
+    <!-- ═══ SCAN SECTION ═══ -->
+    <div id="scanSection">
+
+      <div class="scan-card">
+        <span class="scan-label">สแกนบาร์โค้ดต่อเนื่อง (Batch Scan)</span>
+        <input type="text" id="barcode" placeholder="ยิงบาร์โค้ดที่นี่..." autofocus>
+        <div class="counter-row">
+          <div class="counter-badge"><span id="scanCount">0</span></div>
+          <div class="counter-text">รายการที่รอตรวจสอบ</div>
+        </div>
+        <div class="action-row">
+          <button class="btn-check" onclick="checkPromotions()">🔍 ตรวจสอบทั้งหมด</button>
+          <button class="btn-clear" onclick="confirmClear()">🗑️ ล้างรายการ</button>
+        </div>
+      </div>
+
+      <!-- Tomorrow Mode Toggle -->
+      <div class="tomorrow-toggle-wrap">
+        <button class="btn-tomorrow" id="tomorrowBtn" onclick="toggleTomorrowMode()">
+          <span>📅 โหมดเตรียมโปรพรุ่งนี้(ใช้เฉพาะวันเปลี่ยนโปรนะครับ)</span>
+          <span class="tomorrow-badge" id="tomorrowBadge">ปิด</span>
+        </button>
+      </div>
+
+      <!-- Quick Search Accordion -->
+      <div class="search-accordion">
+        <button class="search-accordion-toggle" onclick="toggleSearchBox()">
+          <span>🔎 ค้นหาจากชื่อสินค้าโดยตรง</span>
+          <span class="accordion-arrow" id="accordionArrow">▼</span>
+        </button>
+        <div class="search-accordion-body" id="searchAccordionBody">
+          <div class="search-inner">
+            <input type="text" id="quickSearch" placeholder="พิมพ์ชื่อสินค้า เช่น ซอสหอย...">
+            <button class="btn-search-go" onclick="quickSearchImage()">ค้นหา</button>
+          </div>
+          <!-- ท่าไม้ตาย Accordion -->
+      <div class="folder-bomb-accordion">
+        <button class="folder-bomb-toggle" onclick="toggleFolderBomb()">
+          <span>เรียกโฟลเดอร์ทั้งหมด</span>
+          <span class="accordion-arrow" id="folderBombArrow">▼</span>
+        </button>
+        <div class="folder-bomb-body" id="folderBombBody">
+          <div class="folder-bomb-inner">
+            <button class="btn-load-folders" onclick="loadAllFolders()">เรียกโฟลเดอร์โปรทั้งหมด</button>
+            <div id="folderBombList"></div>
+          </div>
+        </div>
+      </div>
+        </div>
+      </div>
+
+      <!-- Summary Bar -->
+      <div class="summary-bar" id="summaryBar">
+        <div style="width:100%">
+          <span class="summary-title">ผลการตรวจสอบ</span>
+          <div class="summary-pills">
+            <div class="pill pill-total">
+              <span class="pill-dot"></span>
+              <span>ทั้งหมด <span id="sumTotal">0</span> รายการ</span>
+            </div>
+            <div class="pill pill-promo">
+              <span class="pill-dot"></span>
+              <span>มีโปร <span id="sumPromo">0</span></span>
+            </div>
+            <div class="pill pill-nopromo">
+              <span class="pill-dot"></span>
+              <span>ไม่มีโปร <span id="sumNoPromo">0</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="listHeader" class="list-header" style="display:none;">รายการสินค้า</div>
+      <div id="summaryList"></div>
+      <div id="paginationBar" class="pagination"></div>
+
+    </div>
+
+    <!-- Loading (global) -->
+    <div id="loading">
+      <div class="spinner"></div>
+      <span id="loadingText">กำลังประมวลผล กรุณารอสักครู่...</span>
+    </div>
+
+    <!-- ═══ VIEWER SECTION ═══ -->
+    <div id="viewerSection">
+      <button class="btn-back" onclick="goBack()">⬅️ กลับไปหน้ารายการ</button>
+      <div class="viewer-title" id="viewTitle">-</div>
+      <div id="imgContainer"></div>
+
+      <div class="fallback-box">
+        <div class="fallback-title">💡 หารูปไม่เจอ? ค้นหาโฟลเดอร์ด้วยมือ</div>
+        <input type="text" id="manualKeyword" placeholder="พิมพ์ชื่อสินค้า (เช่น ซอสหอย)">
+        <button class="btn-folder" onclick="searchFolders()">📁 ค้นหาโฟลเดอร์</button>
+        <div id="folderResults" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ── Supabase Config ────────────────────────────────────
+var SUPABASE_URL = 'https://qfthtfhmmocrhukpzqtk.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmdGh0ZmhtbW9jcmh1a3B6cXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NzM3ODIsImV4cCI6MjA5NDM0OTc4Mn0.9jkX7sGXbsBFPOyNGPpIR05pI4V_irsbca4tG2cf2H8';
+
+// ── Supabase fetch helper ──────────────────────────────
+function sbFetch(path) {
+  return fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+    }
+  }).then(function(r) { return r.json(); });
+}
+
+// ── Thai date helpers ──────────────────────────────────
+var THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+function formatThaiDate(dateStr) {
+  var d = new Date(dateStr + 'T00:00:00');
+  return d.getDate() + ' ' + THAI_MONTHS[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(-2);
+}
+
+function formatThaiDateRange(start, end) {
+  return formatThaiDate(start) + ' - ' + formatThaiDate(end);
+}
+
+// ── 1) ตรวจโปรจาก barcode ─────────────────────────────
+function searchMultipleProductsSupabase(barcodes, tomorrowMode) {
+  var barcodeList = barcodes.map(function(b) { return '"' + b + '"'; }).join(',');
+  var path = 'promo_items?barcode=in.(' + barcodeList + ')&select=barcode,name,promo_price,start_date,end_date,keyword&limit=5000';
+
+  return sbFetch(path).then(function(rows) {
+    var promoMap = {};
+    rows.forEach(function(r) { promoMap[r.barcode] = r; });
+
+    var checkDate = new Date();
+    if (tomorrowMode) checkDate.setDate(checkDate.getDate() + 1);
+    checkDate.setHours(0, 0, 0, 0);
+
+    var result = barcodes.map(function(barcode) {
+      var promo = promoMap[barcode];
+      if (!promo) return { hasPromo: false, name: barcode, status: 'ไม่พบข้อมูลสินค้า' };
+
+      var start = new Date(promo.start_date + 'T00:00:00');
+      var end   = new Date(promo.end_date   + 'T23:59:59');
+
+      if (checkDate >= start && checkDate <= end) {
+        return {
+          hasPromo:   true,
+          name:       promo.name,
+          keyword:    promo.keyword,
+          isTomorrow: tomorrowMode,
+          periodText: formatThaiDateRange(promo.start_date, promo.end_date),
+          price:      Number(promo.promo_price).toFixed(2),
+          status:     ''
+        };
+      } else {
+        var status = checkDate < start ? 'ยังไม่ถึงช่วงโปร' : 'ไม่มีโปรโมชั่น';
+        return { hasPromo: false, name: promo.name, status: status };
+      }
+    });
+
+    return { success: true, data: result };
+  });
+}
+
+// ── 2) ค้นหารูปจาก OCR ────────────────────────────────
+function searchDriveImageSupabase(keyword) {
+  var tokens = keyword.trim().split(/\s+/).filter(function(t) { return t.length > 0; });
+  if (tokens.length === 0) return Promise.resolve({ success: true, usedFallback: false, files: [] });
+
+  var threshold = tokens.length <= 2 ? 1 : 2;
+  var orFilter  = tokens.map(function(t) {
+    return 'description.ilike.*' + encodeURIComponent(t) + '*';
+  }).join(',');
+
+  var path = 'ocr_cache?or=(' + orFilter + ')&select=file_id,folder_id,folder_name,description&limit=5000';
+
+  return sbFetch(path).then(function(rows) {
+    var matched = rows.filter(function(row) {
+      var desc  = (row.description || '').toLowerCase();
+      var count = tokens.filter(function(t) { return desc.indexOf(t.toLowerCase()) !== -1; }).length;
+      return count >= threshold;
+    });
+
+    if (matched.length > 0) {
+      var files = matched.map(function(row) {
+        return {
+          thumbnailUrl: 'https://drive.google.com/thumbnail?id=' + row.file_id + '&sz=w800',
+          viewUrl:      'https://drive.google.com/file/d/' + row.file_id + '/view',
+          folderUrl:    row.folder_id ? 'https://drive.google.com/drive/folders/' + row.folder_id : null,
+        };
+      });
+      return { success: true, usedFallback: false, files: files };
+    }
+
+    // Fallback: คืน folder list
+    var folderMap = {};
+    rows.forEach(function(row) {
+      if (row.folder_id && !folderMap[row.folder_id]) folderMap[row.folder_id] = row.folder_name;
+    });
+    var folders = Object.keys(folderMap).map(function(fid) {
+      return { folderId: fid, folderName: folderMap[fid], folderUrl: 'https://drive.google.com/drive/folders/' + fid };
+    });
+    return { success: true, usedFallback: true, folders: folders };
+  });
+}
+
+// ── 3) ค้นหาโฟลเดอร์จาก keyword ──────────────────────
+function searchFolderFallbackSupabase(keyword) {
+  var tokens = keyword.trim().split(/\s+/).filter(function(t) { return t.length > 0; });
+  if (tokens.length === 0) return Promise.resolve({ success: true, folders: [] });
+
+  var orFilter = tokens.map(function(t) {
+    return 'description.ilike.*' + encodeURIComponent(t) + '*';
+  }).join(',');
+
+  var path = 'ocr_cache?or=(' + orFilter + ')&select=folder_id,folder_name&limit=5000';
+
+  return sbFetch(path).then(function(rows) {
+    var folderMap = {};
+    rows.forEach(function(row) {
+      if (row.folder_id && !folderMap[row.folder_id]) folderMap[row.folder_id] = row.folder_name;
+    });
+    var folders = Object.keys(folderMap).map(function(fid) {
+      return { url: 'https://drive.google.com/drive/folders/' + fid, name: folderMap[fid] || fid };
+    });
+    return { success: true, folders: folders };
+  });
+}
+
+// ── 4) โหลดโฟลเดอร์ทั้งหมด (ท่าไม้ตาย) ──────────────
+function getAllTargetFoldersSupabase() {
+  var path = 'ocr_cache?select=folder_id,folder_name&limit=5000';
+  return sbFetch(path).then(function(rows) {
+    var folderMap = {};
+    rows.forEach(function(row) {
+      if (row.folder_id && !folderMap[row.folder_id]) folderMap[row.folder_id] = row.folder_name;
+    });
+    var folders = Object.keys(folderMap).map(function(fid) {
+      return { folderId: fid, folderName: folderMap[fid] || fid, folderUrl: 'https://drive.google.com/drive/folders/' + fid };
+    });
+    return { success: true, folders: folders };
+  });
+}
+
+    var scannedBarcodes = [];
+    var allItems = [];
+    var currentPage = 1;
+    var PAGE_SIZE = 10;
+    var LS_KEY = 'tfg_promo_barcodes';
+    var tomorrowMode = false;
+
+    // ─── Tomorrow Mode ─────────────────────────────────
+    function toggleTomorrowMode() {
+      tomorrowMode = !tomorrowMode;
+      var btn   = document.getElementById('tomorrowBtn');
+      var badge = document.getElementById('tomorrowBadge');
+      btn.classList.toggle('active', tomorrowMode);
+      badge.innerText = tomorrowMode ? 'เปิด — ตรวจโปรพรุ่งนี้' : 'ปิด';
+    }
+
+    // ─── LocalStorage helpers ──────────────────────────
+    function saveToLocal() {
+      try { localStorage.setItem(LS_KEY, JSON.stringify(scannedBarcodes)); } catch(e) {}
+    }
+    function loadFromLocal() {
+      try {
+        var saved = localStorage.getItem(LS_KEY);
+        if (saved) {
+          scannedBarcodes = JSON.parse(saved) || [];
+          document.getElementById('scanCount').innerText = scannedBarcodes.length;
+        }
+      } catch(e) { scannedBarcodes = []; }
+    }
+
+    // ── Kill Switch ────────────────────────────────────────
+function checkSiteActive() {
+  sbFetch('site_config?key=eq.site_active&select=value')
+    .then(function(rows) {
+      if (rows.length > 0 && rows[0].value === 'false') {
+        document.body.innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--blue-pale);font-family:Sarabun,sans-serif;">' +
+          '<div style="text-align:center;padding:32px;">' +
+          '<div style="font-size:48px;margin-bottom:16px;">🔒</div>' +
+          '<div style="font-size:20px;font-weight:800;color:var(--blue-dark);margin-bottom:8px;">ระบบปิดชั่วคราว</div>' +
+          '<div style="font-size:14px;color:var(--text-muted);">กรุณาติดต่อผู้ดูแลระบบ</div>' +
+          '</div></div>';
+      }
+    })
+    .catch(function() {}); // ถ้า Supabase ไม่ตอบ ให้ผ่านไปได้เลย
+}
+
+checkSiteActive();
+
+    // ─── Init ──────────────────────────────────────────
+    document.addEventListener("DOMContentLoaded", function() {
+      loadFromLocal(); // โหลด barcode ที่เคยสแกนไว้จาก LocalStorage
+
+      var input = document.getElementById('barcode');
+      input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          var val = input.value.trim();
+          if (val && scannedBarcodes.indexOf(val) === -1) {
+            scannedBarcodes.push(val);
+            document.getElementById('scanCount').innerText = scannedBarcodes.length;
+            saveToLocal(); // บันทึกทันทีทุกครั้งที่สแกน
+          }
+          input.value = '';
+          input.focus();
+        }
+      });
+
+      // Quick search: กด Enter ได้เลย
+      document.getElementById('quickSearch').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); quickSearchImage(); }
+      });
+    });
+
+    // ─── Clear barcode list ────────────────────────────
+    function confirmClear() {
+      if (scannedBarcodes.length === 0) {
+        alert('ไม่มีรายการที่จะลบครับ');
+        return;
+      }
+      if (confirm('ต้องการล้างรายการ ' + scannedBarcodes.length + ' รายการใช่ไหมครับ?\n\nการดำเนินการนี้ไม่สามารถย้อนกลับได้')) {
+        scannedBarcodes = [];
+        document.getElementById('scanCount').innerText = 0;
+        saveToLocal();
+        // ล้าง UI ด้วย
+        document.getElementById('summaryList').innerHTML = '';
+        document.getElementById('paginationBar').innerHTML = '';
+        document.getElementById('summaryBar').classList.remove('show');
+        document.getElementById('listHeader').style.display = 'none';
+        allItems = [];
+      }
+    }
+
+    // ─── Accordion toggle ──────────────────────────────
+    function toggleSearchBox() {
+      var body  = document.getElementById('searchAccordionBody');
+      var arrow = document.getElementById('accordionArrow');
+      var isOpen = body.classList.contains('open');
+      body.classList.toggle('open', !isOpen);
+      arrow.classList.toggle('open', !isOpen);
+      if (!isOpen) {
+        setTimeout(function() { document.getElementById('quickSearch').focus(); }, 300);
+      }
+    }
+
+    // ─── Quick Search (ค้นหาจากชื่อสินค้าโดยตรง) ──────
+    function quickSearchImage() {
+      var kw = document.getElementById('quickSearch').value.trim();
+      if (!kw) { alert('กรุณาพิมพ์ชื่อสินค้าครับ'); return; }
+      openImageViewer(kw, kw);
+    }
+
+    // ─── Check Promotions ──────────────────────────────
+    function checkPromotions() {
+      if (scannedBarcodes.length === 0) { alert('กรุณาสแกนสินค้าอย่างน้อย 1 รายการครับ'); return; }
+      showLoading('กำลังประมวลผล กรุณารอสักครู่...');
+      document.getElementById('summaryList').innerHTML = '';
+      document.getElementById('paginationBar').innerHTML = '';
+      document.getElementById('summaryBar').classList.remove('show');
+      document.getElementById('listHeader').style.display = 'none';
+      searchMultipleProductsSupabase(scannedBarcodes, tomorrowMode)
+    .then(renderSummary)
+    .catch(function(e) { hideLoading(); alert('เกิดข้อผิดพลาด: ' + e.toString()); });
+    }
+
+    function renderSummary(res) {
+      hideLoading();
+      if (!res.success) { alert(res.message); return; }
+
+      allItems = res.data;
+      currentPage = 1;
+
+      var total = allItems.length;
+      var promoCount = 0, noPromoCount = 0;
+      for (var i = 0; i < allItems.length; i++) {
+        if (allItems[i].hasPromo) promoCount++; else noPromoCount++;
+      }
+      document.getElementById('sumTotal').innerText   = total;
+      document.getElementById('sumPromo').innerText   = promoCount;
+      document.getElementById('sumNoPromo').innerText = noPromoCount;
+      document.getElementById('summaryBar').classList.add('show');
+      document.getElementById('listHeader').style.display = 'block';
+
+      renderPage(currentPage);
+
+      // ล้าง barcode หลังตรวจสอบเสร็จ
+      scannedBarcodes = [];
+      document.getElementById('scanCount').innerText = 0;
+      saveToLocal();
+    }
+
+    function renderPage(page) {
+      var start = (page - 1) * PAGE_SIZE;
+      var end   = Math.min(start + PAGE_SIZE, allItems.length);
+      var pageItems = allItems.slice(start, end);
+
+      var listContainer = document.getElementById('summaryList');
+      listContainer.innerHTML = '';
+
+      for (var i = 0; i < pageItems.length; i++) {
+        var item = pageItems[i];
+        var globalNum = start + i + 1;
+        var div = document.createElement('div');
+
+        if (item.hasPromo) {
+          div.className = 'list-item has-promo';
+          div.setAttribute('data-keyword', item.keyword);
+          div.setAttribute('data-name', item.name);
+          div.onclick = (function(n, k) {
+            return function() { openImageViewer(n, k); };
+          })(item.name, item.keyword);
+          div.innerHTML =
+            '<div class="item-num">' + globalNum + '</div>' +
+            '<div class="item-body">' +
+              '<div class="item-name">' + item.name + '</div>' +
+              '<div class="item-status">✔️ ' + (item.isTomorrow ? 'มีโปรพรุ่งนี้ — แตะเพื่อดูรูป' : 'แตะเพื่อดูรูปโปรโมชั่น') + '</div>' +
+              '<div class="item-period">📅 ' + item.periodText + '</div>' +
+            '</div>' +
+            '<div class="item-price">฿' + item.price + '</div>';
+        } else {
+          div.className = 'list-item no-promo';
+          div.innerHTML =
+            '<div class="item-num">' + globalNum + '</div>' +
+            '<div class="item-body">' +
+              '<div class="item-name">' + item.name + '</div>' +
+              '<div class="item-status">❌ ' + item.status + '</div>' +
+            '</div>';
+        }
+        listContainer.appendChild(div);
+      }
+      renderPagination(page);
+    }
+
+    function renderPagination(page) {
+      var totalPages = Math.ceil(allItems.length / PAGE_SIZE);
+      var bar = document.getElementById('paginationBar');
+      bar.innerHTML = '';
+      if (totalPages <= 1) return;
+
+      var prev = document.createElement('button');
+      prev.className = 'page-btn';
+      prev.innerText = '◀';
+      prev.disabled = (page === 1);
+      prev.onclick = function() { changePage(page - 1); };
+      bar.appendChild(prev);
+
+      var rangeStart = Math.max(1, page - 2);
+      var rangeEnd   = Math.min(totalPages, page + 2);
+      for (var p = rangeStart; p <= rangeEnd; p++) {
+        var btn = document.createElement('button');
+        btn.className = 'page-btn' + (p === page ? ' active' : '');
+        btn.innerText = p;
+        (function(pg) { btn.onclick = function() { changePage(pg); }; })(p);
+        bar.appendChild(btn);
+      }
+
+      var next = document.createElement('button');
+      next.className = 'page-btn';
+      next.innerText = '▶';
+      next.disabled = (page === totalPages);
+      next.onclick = function() { changePage(page + 1); };
+      bar.appendChild(next);
+
+      var info = document.createElement('span');
+      info.className = 'page-info';
+      info.style.cssText = 'width:100%;text-align:center;display:block;margin-top:6px;';
+      info.innerText = 'หน้า ' + page + ' / ' + totalPages + '  (' + allItems.length + ' รายการ)';
+      bar.appendChild(info);
+    }
+
+    function changePage(page) {
+      currentPage = page;
+      renderPage(page);
+      window.scrollTo(0, 0);
+    }
+
+    // ─── Image Viewer ──────────────────────────────────────
+    function openImageViewer(name, keyword) {
+      document.getElementById('scanSection').style.display = 'none';
+      document.getElementById('viewerSection').style.display = 'block';
+      document.getElementById('viewTitle').innerText = name;
+      document.getElementById('imgContainer').innerHTML = '';
+      document.getElementById('folderResults').innerHTML = '';
+      document.getElementById('manualKeyword').value = keyword;
+
+      showLoading('🔍 กำลังค้นหารูปโปรโมชั่น โปรดรอสักครู่...');
+      searchDriveImageSupabase(keyword)
+    .then(renderImages)
+    .catch(function(e) { hideLoading(); alert('เกิดข้อผิดพลาด: ' + e.toString()); });
+    }
+
+    function renderImages(res) {
+      hideLoading();
+      var container = document.getElementById('imgContainer');
+      container.innerHTML = '';
+
+      // ── ก๊อก 2: ไม่เจอรูปเลย → แสดง folder list ──
+      if (res.success && res.usedFallback) {
+        var header = document.createElement('div');
+        header.style.cssText = 'padding:14px 0 10px;font-weight:800;color:var(--blue-dark);font-size:15px;';
+        header.innerText = '📁 ไม่พบรูปใน Index — เลือกโฟลเดอร์เพื่อค้นหาต่อ';
+        container.appendChild(header);
+
+        if (res.folders && res.folders.length > 0) {
+          for (var j = 0; j < res.folders.length; j++) {
+            var f = res.folders[j];
+            var a = document.createElement('a');
+            a.href = f.folderUrl;
+            a.target = '_blank';
+            a.className = 'folder-link';
+            a.innerHTML = '📁 ' + (f.folderName || f.folderId);
+            container.appendChild(a);
+          }
+        } else {
+          container.innerHTML += '<p style="color:var(--text-muted);text-align:center;padding:10px;">ไม่พบโฟลเดอร์ใน Target</p>';
+        }
+        return;
+      }
+
+      // ── ก๊อก 1: มีรูป → แสดงรูป ──
+      if (res.success && res.files && res.files.length > 0) {
+        var countBar = document.createElement('div');
+        countBar.style.cssText = 'font-size:12px;color:var(--text-muted);font-weight:700;padding:4px 2px 10px;';
+        countBar.innerText = 'พบ ' + res.files.length + ' รูป — เลื่อนดูได้เลย';
+        container.appendChild(countBar);
+
+        for (var i = 0; i < res.files.length; i++) {
+          var file = res.files[i];
+          var card = document.createElement('div');
+          card.className = 'img-card';
+
+          var img = document.createElement('img');
+          img.className = 'img-preview';
+          img.src = file.thumbnailUrl;
+          img.alt = 'รูปโปรโมชั่น';
+          img.onerror = function() {
+            this.style.display = 'none';
+            var err = document.createElement('div');
+            err.className = 'img-error';
+            err.innerText = '⚠️ โหลดรูปไม่ได้ กรุณาเปิดต้นฉบับ';
+            this.parentNode.insertBefore(err, this);
+          };
+
+          // ปุ่มเปิดต้นฉบับ
+          var btn = document.createElement('button');
+          btn.className = 'btn-print';
+          btn.innerText = '🖨️ เปิดภาพต้นฉบับเพื่อพิมพ์';
+          btn.onclick = (function(url) {
+            return function() { window.open(url, '_blank'); };
+          })(file.viewUrl);
+
+          card.appendChild(img);
+          card.appendChild(btn);
+
+          // ปุ่มโฟลเดอร์ต้นทาง (ถ้ามี)
+          if (file.folderUrl) {
+            var btnFolder = document.createElement('a');
+            btnFolder.href = file.folderUrl;
+            btnFolder.target = '_blank';
+            btnFolder.className = 'folder-link';
+            btnFolder.style.marginTop = '8px';
+            btnFolder.innerText = '📁 เปิดโฟลเดอร์ต้นทาง';
+            card.appendChild(btnFolder);
+          }
+
+          container.appendChild(card);
+        }
+      } else {
+        // ไม่น่าเกิด แต่ safety net
+        container.innerHTML =
+          '<p style="color:var(--danger);text-align:center;padding:16px 0;font-weight:700;">❌ ไม่พบรูปภาพจาก Keyword นี้</p>';
+      }
+    }
+
+    // ─── Folder Search ─────────────────────────────────────
+    function searchFolders() {
+      var keyword = document.getElementById('manualKeyword').value.trim();
+      if (!keyword) return;
+      document.getElementById('folderResults').innerHTML = '';
+      showLoading('📁 กำลังสแกนหาโฟลเดอร์ โปรดรอสักครู่...');
+      searchFolderFallbackSupabase(keyword)
+    .then(renderFolders)
+    .catch(function(e) { hideLoading(); alert('เกิดข้อผิดพลาด: ' + e.toString()); });
+    }
+
+    function renderFolders(res) {
+      hideLoading();
+      var container = document.getElementById('folderResults');
+      if (res.success && res.folders.length > 0) {
+        for (var i = 0; i < res.folders.length; i++) {
+          var f = res.folders[i];
+          var a = document.createElement('a');
+          a.href = f.url;
+          a.target = '_blank';
+          a.className = 'folder-link';
+          a.innerHTML = '📁 ' + f.name;
+          container.appendChild(a);
+        }
+      } else {
+        container.innerHTML = '<p style="color:var(--text-muted);text-align:center;">ไม่พบโฟลเดอร์ที่มีคำนี้</p>';
+      }
+    }
+
+    // ─── ท่าไม้ตาย ─────────────────────────────────────────
+    function toggleFolderBomb() {
+      var body  = document.getElementById('folderBombBody');
+      var arrow = document.getElementById('folderBombArrow');
+      var isOpen = body.classList.contains('open');
+      body.classList.toggle('open', !isOpen);
+      arrow.classList.toggle('open', !isOpen);
+    }
+
+    function loadAllFolders() {
+      var list = document.getElementById('folderBombList');
+      list.innerHTML = '<div style="text-align:center;padding:14px;color:var(--danger);font-weight:700;">⏳ กำลังโหลดโฟลเดอร์ทั้งหมด...</div>';
+      getAllTargetFoldersSupabase()
+    .then(renderFolderBomb)
+    .catch(function(e) {
+      list.innerHTML = '<p style="color:var(--danger);text-align:center;">❌ เกิดข้อผิดพลาด: ' + e.message + '</p>';
+    });
+    }
+
+    function renderFolderBomb(res) {
+      var list = document.getElementById('folderBombList');
+      list.innerHTML = '';
+      if (!res.success || !res.folders || res.folders.length === 0) {
+        list.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:10px;">ไม่พบโฟลเดอร์</p>';
+        return;
+      }
+      var header = document.createElement('div');
+      header.style.cssText = 'font-size:12px;color:var(--danger);font-weight:700;padding:4px 2px 10px;letter-spacing:0.5px;';
+      header.innerText = 'พบ ' + res.folders.length + ' โฟลเดอร์ — แตะเพื่อเปิด';
+      list.appendChild(header);
+      for (var i = 0; i < res.folders.length; i++) {
+        var f = res.folders[i];
+        var a = document.createElement('a');
+        a.href = f.folderUrl;
+        a.target = '_blank';
+        a.className = 'folder-link';
+        a.innerHTML = '📁 ' + (f.folderName || f.folderId);
+        list.appendChild(a);
+      }
+    }
+
+    // ─── Back ──────────────────────────────────────────────
+    function goBack() {
+      document.getElementById('viewerSection').style.display = 'none';
+      document.getElementById('scanSection').style.display = 'block';
+      document.getElementById('barcode').focus();
+    }
+
+    // ─── Loading Helpers ───────────────────────────────────
+    function showLoading(msg) {
+      document.getElementById('loadingText').innerText = msg || 'กำลังประมวลผล...';
+      document.getElementById('loading').style.display = 'block';
+    }
+    function hideLoading() {
+      document.getElementById('loading').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
