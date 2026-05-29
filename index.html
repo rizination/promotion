@@ -1313,6 +1313,18 @@ function checkSiteActive() {
     }
 
     initApp();
+    document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState !== 'visible') return;
+  var session = getSession();
+  if (!session) { location.reload(); return; }
+  sbFetch('access_codes?code=eq.' + encodeURIComponent(session.code) + '&select=status,expires_at')
+    .then(function(rows) {
+      if (!rows || rows.length === 0) { clearSession(); location.reload(); return; }
+      var user = rows[0];
+      if (user.status === 'locked' || isExpired(user.expires_at)) { clearSession(); location.reload(); }
+    })
+    .catch(function() {}); // ถ้า Supabase ไม่ตอบ ให้ใช้งานต่อได้
+});
 
     // ─── Clear barcode list ────────────────────────────
     function confirmClear() {
