@@ -1130,7 +1130,8 @@ function checkSiteActive() {
             }
             var patches = [];
             if (!user.device_fp && user.role !== 'admin') patches.push(sbPatch('access_codes?code=eq.' + encodeURIComponent(code), { device_fp: fp }));
-            patches.push(sbPost('login_logs', { code: code, label: user.label, device_fp: fp }));
+            var nowTH = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().replace('Z', '+07:00');
+            patches.push(sbPost('login_logs', { code: code, label: user.label, device_fp: fp, logged_in_at: nowTH }));
             return Promise.all(patches).then(function() {
               saveSession({ code: user.code, label: user.label, role: user.role, fp: fp, expires_at: user.expires_at });
               if (user.role === 'admin') showAdminSection();
