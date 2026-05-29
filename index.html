@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ค้นหาโปรโมชั่น</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@4/dist/fp.min.js"></script>
+  
   <style>
     :root {
       --blue-dark:  #003a7a;
@@ -1007,11 +1007,30 @@ function checkSiteActive() {
 
 // checkSiteActive() ถูกเรียกจาก showAppSection() เท่านั้น
 
-    // ─── Init ──────────────────────────────────────────
-    var fpPromise = FingerprintJS.load();
+    // ── ฟังก์ชันสร้าง UUID แบบสุ่ม (รองรับเบราว์เซอร์เก่าบน HH)
+    function generateUUID() {
+      if (window.crypto && crypto.randomUUID) {
+        return crypto.randomUUID();
+      }
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    // ── ดึง Device ID จาก LocalStorage หากไม่มีให้สร้างใหม่
     function getFingerprint() {
-      return fpPromise.then(function(fp) { return fp.get(); })
-        .then(function(result) { return result.visitorId; });
+      return new Promise(function(resolve) {
+        var DEVICE_ID_KEY = 'tfg_local_device_id';
+        var deviceId = localStorage.getItem(DEVICE_ID_KEY);
+        
+        if (!deviceId) {
+          deviceId = generateUUID();
+          localStorage.setItem(DEVICE_ID_KEY, deviceId);
+        }
+        
+        resolve(deviceId);
+      });
     }
 
     var SESSION_KEY = 'promo_auth_session';
