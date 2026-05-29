@@ -1083,6 +1083,12 @@ function checkSiteActive() {
 
     // ── initApp ────────────────────────────────────────
     function initApp() {
+
+        if (localStorage.getItem('promo_auth_session')) {
+        localStorage.removeItem('promo_auth_session');
+        location.reload();
+        return;
+      }
       var session = getSession();
       if (!session) { showLoginSection(); return; }
 
