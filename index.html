@@ -1332,19 +1332,29 @@ function checkSiteActive() {
       });
     }
 
+    // ── เช็คความถูกต้องของ session กับ Supabase ────────────
+    // ใช้ทั้งตอน visibilitychange และตอน setInterval (periodic check)
+    function checkSessionValidity() {
+      var session = getSession();
+      if (!session) return; // ยังไม่ login อยู่ ไม่ต้องเช็ค
+      sbFetch('access_codes?code=eq.' + encodeURIComponent(session.code) + '&select=status,expires_at')
+        .then(function(rows) {
+          if (!rows || rows.length === 0) { clearSession(); location.reload(); return; }
+          var user = rows[0];
+          if (user.status === 'locked' || isExpired(user.expires_at)) { clearSession(); location.reload(); }
+        })
+        .catch(function() {}); // ถ้า Supabase ไม่ตอบ ให้ใช้งานต่อได้
+    }
+
     initApp();
     document.addEventListener('visibilitychange', function() {
-  if (document.visibilityState !== 'visible') return;
-  var session = getSession();
-  if (!session) { location.reload(); return; }
-  sbFetch('access_codes?code=eq.' + encodeURIComponent(session.code) + '&select=status,expires_at')
-    .then(function(rows) {
-      if (!rows || rows.length === 0) { clearSession(); location.reload(); return; }
-      var user = rows[0];
-      if (user.status === 'locked' || isExpired(user.expires_at)) { clearSession(); location.reload(); }
-    })
-    .catch(function() {}); // ถ้า Supabase ไม่ตอบ ให้ใช้งานต่อได้
-});
+      if (document.visibilityState !== 'visible') return;
+      var session = getSession();
+      if (!session) { location.reload(); return; }
+      checkSessionValidity();
+    });
+    // Periodic re-check ทุก 15 นาที เผื่อกรณีเปิดแอปทิ้งไว้หน้าเดิมไม่สลับแอปออก-เข้า
+    setInterval(checkSessionValidity, 15 * 60 * 1000);
 
     // ─── Clear barcode list ────────────────────────────
     function confirmClear() {
