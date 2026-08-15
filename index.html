@@ -623,6 +623,209 @@
       border-radius: 8px; margin-bottom: 12px;
       color: var(--text-muted); font-size: 13px;
     }
+
+    /* ════════════════════════════════════════════════
+       ★ PREMIUM: รวมรูปพิมพ์ (Merge & Print)
+       ════════════════════════════════════════════════ */
+
+    /* Badge พรีเมียมใน Admin */
+    .status-premium { background: #FFF8E1; color: #F57F17; }
+    .btn-premium-on  { background: #FFF8E1; color: #F57F17; }
+    .btn-premium-off { background: #ECEFF1; color: #90A4AE; }
+
+    /* ปุ่มเข้าโหมดรวมรูป (หน้าหลัก) */
+    .merge-entry-wrap { margin: 0 0 14px; }
+    .btn-merge-entry {
+      width: 100%; padding: 15px; border: none; border-radius: 12px; cursor: pointer;
+      background: linear-gradient(135deg, #F57F17 0%, #FF9800 100%);
+      color: #fff; font-size: 15px; font-weight: 800; font-family: 'Sarabun', sans-serif;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      box-shadow: 0 4px 12px rgba(245,127,23,0.28);
+    }
+    .btn-merge-entry:active { opacity: 0.9; }
+
+    /* โหมดรวมรูป (เต็มหน้า แยกจาก scan/viewer) */
+    /* โหมดรวมรูป (ยกเลิก — ย้ายไปผูกกับ viewerSection เดิม) */
+    .merge-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+    }
+    .merge-header .btn-back { margin-bottom: 0; }
+    .merge-title { font-size: 17px; font-weight: 800; color: var(--blue-dark); }
+    .merge-search-card {
+      background: var(--white); border-radius: 12px; padding: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 14px;
+    }
+    .merge-search-inner { display: flex; gap: 8px; }
+    .merge-search-inner input {
+      flex: 1; padding: 12px 14px; border: 2px solid var(--blue-light);
+      border-radius: 8px; font-size: 15px; font-family: 'Sarabun', sans-serif;
+      background: var(--blue-pale);
+    }
+    .merge-search-inner input:focus { border-color: var(--blue); outline: none; background: var(--white); }
+    .btn-merge-search {
+      padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-mid) 100%);
+      color: #fff; font-size: 14px; font-weight: 700; font-family: 'Sarabun', sans-serif; white-space: nowrap;
+    }
+    .merge-hint { font-size: 12px; color: var(--text-muted); margin: 8px 2px 0; }
+
+    /* การ์ดผลค้นหาในโหมดรวมรูป */
+    #viewerSection .img-card { position: relative; }
+    .btn-pick-sheet {
+      width: 100%; padding: 12px; margin-top: 8px; border: none; border-radius: 8px;
+      background: linear-gradient(135deg, #F57F17 0%, #FF9800 100%);
+      color: #fff; font-size: 14px; font-weight: 800; font-family: 'Sarabun', sans-serif; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-pick-sheet:active { opacity: 0.9; }
+
+    /* Overlay เลือกช่อง (แผ่นเต็ม + grid 2×3) */
+    #cellOverlay {
+      display: none; position: fixed; inset: 0; z-index: 9000;
+      background: rgba(0,20,45,0.86); overflow-y: auto; padding: 14px;
+    }
+    .cell-overlay-inner {
+      max-width: 560px; margin: 0 auto; background: var(--white);
+      border-radius: 14px; padding: 14px; margin-top: 8px;
+    }
+    .cell-overlay-head {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+    }
+    .cell-overlay-head .t { font-size: 15px; font-weight: 800; color: var(--blue-dark); }
+    .btn-overlay-close {
+      width: 34px; height: 34px; border: none; border-radius: 50%; cursor: pointer;
+      background: var(--danger-bg); color: var(--danger); font-size: 18px; font-weight: 800; line-height: 1;
+    }
+    .cell-sheet-wrap { position: relative; width: 100%; border-radius: 10px; overflow: hidden; }
+    .cell-sheet-wrap img { width: 100%; display: block; }
+    /* กริด 6 ช่องทับบนแผ่น */
+    .cell-grid {
+      position: absolute; inset: 0; display: grid;
+      grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 0;
+    }
+    .cell-hit {
+      border: 1.5px dashed rgba(245,127,23,0.55); cursor: pointer;
+      display: flex; align-items: flex-start; justify-content: flex-end;
+      transition: background 0.12s;
+    }
+    .cell-hit:active { background: rgba(245,127,23,0.25); }
+    .cell-hit .num {
+      margin: 4px; width: 22px; height: 22px; border-radius: 50%;
+      background: rgba(245,127,23,0.9); color: #fff; font-size: 12px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cell-hit .picked-badge {
+      align-self: center; margin: auto; background: #F57F17; color: #fff;
+      font-size: 20px; font-weight: 800; width: 40px; height: 40px; border-radius: 50%;
+      display: none; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .cell-overlay-note { font-size: 12px; color: var(--text-muted); margin: 10px 2px 0; text-align: center; }
+    /* ═══ ★ ตะกร้า = พรีวิว A4 ย่อ (มือถือเป็นหลัก) ═══ */
+
+    /* มุมย่อลอย (ไม่บัง viewer — แตะเพื่อขยาย) */
+    #basketMini {
+      display: none; position: fixed; right: 12px; z-index: 8000;
+      bottom: calc(14px + env(safe-area-inset-bottom));
+      width: 104px; background: var(--white); border-radius: 12px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.22); border: 2px solid #F57F17;
+      padding: 7px; cursor: pointer;
+    }
+    .mini-a4 {
+      position: relative; width: 100%; aspect-ratio: 210/297;
+      background: #fff; border: 1px solid var(--blue-light); border-radius: 4px;
+      display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 1px;
+      overflow: hidden;
+    }
+    .mini-a4 .m-cell { position: relative; overflow: hidden; background: #F4F7FB; }
+    .mini-a4 .m-cell.filled { background: #fff; }
+    .mini-a4 .m-cell .mc-wrap { position: absolute; inset: 0; overflow: hidden; }
+    .mini-a4 .m-cell .mc-wrap img { position: absolute; width: 200%; height: 300%; max-width: none; }
+    .mini-badge {
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+      margin-top: 5px; font-size: 12px; font-weight: 800; color: var(--blue-dark);
+    }
+    .mini-badge b { color: #F57F17; }
+    .mini-badge .tap-hint { font-size: 9px; color: var(--text-muted); font-weight: 600; }
+
+    /* พรีวิวเต็มจอ (ตอนแตะขยาย — ดูก่อนพิมพ์ + จิ้มลบ + พิมพ์) */
+    #basketModal {
+      display: none; position: fixed; inset: 0; z-index: 9500;
+      background: rgba(0,20,45,0.88); overflow-y: auto; padding: 14px;
+    }
+    .basket-modal-inner {
+      max-width: 380px; margin: 8px auto 0; background: var(--white);
+      border-radius: 14px; padding: 14px;
+    }
+    .bm-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .bm-title { font-size: 16px; font-weight: 800; color: var(--blue-dark); }
+    .bm-title b { color: #F57F17; }
+    .btn-bm-close {
+      width: 34px; height: 34px; border: none; border-radius: 50%; cursor: pointer;
+      background: var(--danger-bg); color: var(--danger); font-size: 18px; font-weight: 800; line-height: 1;
+    }
+    /* แผ่น A4 ใหญ่ในโมดัล */
+    .big-a4 {
+      position: relative; width: 100%; aspect-ratio: 210/297;
+      background: #fff; border: 1px solid var(--blue-light); border-radius: 6px;
+      display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 2px;
+      overflow: hidden; margin-bottom: 12px;
+    }
+    .big-a4 .b-cell {
+      position: relative; overflow: hidden; background: var(--blue-pale);
+      border: 1px dashed var(--blue-light);
+    }
+    .big-a4 .b-cell.filled { background: #fff; border-style: solid; border-color: #F57F17; }
+    .big-a4 .b-cell .bc-wrap { position: absolute; inset: 0; overflow: hidden; }
+    .big-a4 .b-cell .bc-wrap img { position: absolute; width: 200%; height: 300%; max-width: none; }
+    .big-a4 .b-cell .b-empty {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: #B0BEC5; font-weight: 700;
+    }
+    .big-a4 .b-cell .b-del {
+      position: absolute; top: 4px; right: 4px; z-index: 2; width: 24px; height: 24px;
+      background: var(--danger); color: #fff; border-radius: 50%; font-size: 14px; font-weight: 800;
+      display: none; align-items: center; justify-content: center; line-height: 1; cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .big-a4 .b-cell.filled .b-del { display: flex; }
+    .bm-actions { display: flex; gap: 8px; }
+    .btn-bm-clear {
+      flex: 0 0 auto; padding: 14px 16px; border: 2px solid var(--danger-bg); border-radius: 10px;
+      background: var(--white); color: var(--danger); font-size: 14px; font-weight: 800;
+      font-family: 'Sarabun', sans-serif; cursor: pointer;
+    }
+    .btn-bm-print {
+      flex: 1; padding: 14px; border: none; border-radius: 10px; cursor: pointer;
+      background: linear-gradient(135deg, #F57F17 0%, #FF9800 100%);
+      color: #fff; font-size: 16px; font-weight: 800; font-family: 'Sarabun', sans-serif;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-bm-print:active { opacity: 0.9; }
+    .bm-note { font-size: 12px; color: var(--text-muted); text-align: center; margin: 10px 2px 0; }
+
+    /* ════════════ PRINT: แผ่นรวม A4 ════════════ */
+    #printSheet { display: none; }
+    @media print {
+      /* เอา UI เดิมออกจาก layout จริง (ไม่ใช่แค่ซ่อน) กันมันกินหน้ากระดาษ */
+      #loginSection, #adminSection,
+      #appWrapper > .header, #appWrapper > .container,
+      #basketMini, #basketModal, #cellOverlay { display: none !important; }
+      #printSheet {
+        display: grid !important; position: absolute; left: 0; top: 0;
+        width: 194mm; grid-template-columns: 97mm 97mm;
+        grid-template-rows: 93.6mm 93.6mm 93.6mm;
+        gap: 0; margin: 0; padding: 0;
+      }
+      .print-cell {
+        position: relative; overflow: hidden;
+        width: 97mm; height: 93.6mm; page-break-inside: avoid;
+      }
+      .print-cell .crop-wrap { position: absolute; inset: 0; overflow: hidden; }
+      .print-cell .crop-wrap img { position: absolute; width: 200%; height: 300%; max-width: none; }
+      .print-cell.empty { background: #fff; }
+      @page { size: A4 portrait; margin: 8mm; }
+    }
   </style>
 </head>
 <body>
@@ -764,6 +967,48 @@
     </div><!-- end viewerSection -->
 
   </div><!-- end container -->
+
+  <!-- ═══ ★ Overlay เลือกช่อง ═══ -->
+  <div id="cellOverlay">
+    <div class="cell-overlay-inner">
+      <div class="cell-overlay-head">
+        <span class="t">จิ้มช่องที่ต้องการ</span>
+        <button class="btn-overlay-close" onclick="closeCellOverlay()">✕</button>
+      </div>
+      <div class="cell-sheet-wrap">
+        <img id="cellSheetImg" src="" alt="แผ่นโปรโมชั่น">
+        <div class="cell-grid" id="cellGrid"></div>
+      </div>
+      <p class="cell-overlay-note">เส้นปะ = รอยหารช่อง (บน→ล่าง, ซ้าย→ขวา) · จิ้มซ้ำได้ถ้าอยากได้หลายใบ</p>
+    </div>
+  </div>
+
+  <!-- ═══ ★ ตะกร้าลอย ═══ -->
+  <!-- ═══ ★ ตะกร้าย่อลอยมุม (แตะเพื่อขยาย) ═══ -->
+  <div id="basketMini" onclick="openBasketModal()">
+    <div class="mini-a4" id="miniA4"></div>
+    <div class="mini-badge"><span><b id="miniCount">0</b>/6</span><span class="tap-hint">แตะดู</span></div>
+  </div>
+
+  <!-- ═══ ★ พรีวิว A4 เต็มจอ (ดูก่อนพิมพ์ + จิ้มลบ + พิมพ์) ═══ -->
+  <div id="basketModal">
+    <div class="basket-modal-inner">
+      <div class="bm-head">
+        <span class="bm-title">แผ่นพิมพ์ <b id="bmCount">0</b>/6</span>
+        <button class="btn-bm-close" onclick="closeBasketModal()">✕</button>
+      </div>
+      <div class="big-a4" id="bigA4"></div>
+      <div class="bm-actions">
+        <button class="btn-bm-clear" onclick="clearBasket()">🗑️</button>
+        <button class="btn-bm-print" onclick="printBasket()">🖨️ พิมพ์แผ่นรวม</button>
+      </div>
+      <p class="bm-note">จิ้มช่องที่มีรูปเพื่อลบ · ช่องว่างจะไม่ถูกพิมพ์</p>
+    </div>
+  </div>
+
+  <!-- ═══ ★ แผ่นพิมพ์จริง (ซ่อนไว้ โผล่ตอน print) ═══ -->
+  <div id="printSheet"></div>
+
   </div><!-- end appWrapper -->
 
   <script>
@@ -893,6 +1138,7 @@ function searchDriveImageSupabase(keyword) {
     if (matched.length > 0) {
       var files = matched.map(function(row) {
         return {
+          file_id:      row.file_id,
           thumbnailUrl: 'https://drive.google.com/thumbnail?id=' + row.file_id + '&sz=w800',
           viewUrl:      'https://drive.google.com/file/d/' + row.file_id + '/view',
           folderUrl:    row.folder_id
@@ -1118,7 +1364,7 @@ function checkSiteActive() {
           if (user.status === 'locked')     { clearSession(); showLoginSection('รหัสนี้ถูกระงับการใช้งาน'); return; }
           if (isExpired(user.expires_at))   { clearSession(); showLoginSection('รหัสนี้หมดอายุแล้ว'); return; }
           if (user.device_fp && user.device_fp !== session.fp) { clearSession(); showLoginSection(); return; }
-          saveSession({ code: user.code, label: user.label, role: user.role, fp: session.fp, expires_at: user.expires_at });
+          saveSession({ code: user.code, label: user.label, role: user.role, fp: session.fp, expires_at: user.expires_at, premium: !!user.premium });
           if (user.role === 'admin') showAdminSection();
           else showAppSection();
         })
@@ -1152,7 +1398,7 @@ function checkSiteActive() {
             var nowTH = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().replace('Z', '+07:00');
             patches.push(sbPost('login_logs', { code: code, label: user.label, device_fp: fp, logged_in_at: nowTH }));
             return Promise.all(patches).then(function() {
-              saveSession({ code: user.code, label: user.label, role: user.role, fp: fp, expires_at: user.expires_at });
+              saveSession({ code: user.code, label: user.label, role: user.role, fp: fp, expires_at: user.expires_at, premium: !!user.premium });
               if (user.role === 'admin') showAdminSection();
               else showAppSection();
             });
@@ -1198,6 +1444,8 @@ function checkSiteActive() {
         '<input type="text" id="newLabel" placeholder="ชื่อสาขา / ผู้ใช้">' +
         '<select id="newRole"><option value="user">👤 User</option><option value="admin">⚙️ Admin</option></select>' +
         '<input type="date" id="newExpiry" value="' + defaultExpiry + '">' +
+        '<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#F57F17;cursor:pointer;padding:2px;">' +
+        '<input type="checkbox" id="newPremium" style="width:18px;height:18px;accent-color:#F57F17;"> ⭐ เปิดสิทธิ์พรีเมียม (รวมรูปพิมพ์)</label>' +
         '<button class="btn-admin-save" onclick="addUser()">💾 บันทึก</button>' +
         '</div></div>';
     }
@@ -1214,6 +1462,7 @@ function checkSiteActive() {
       html += '<div class="user-label">' + (user.label || '—') + '</div>';
       html += '<div class="user-meta">';
       html += '<span class="user-status ' + statusClass + '">' + statusText + '</span>';
+      if (user.premium) html += '<span class="user-status status-premium">⭐ พรีเมียม</span>';
       html += '<span class="user-expiry">หมด: ' + formatThaiDate(user.expires_at) + '</span>';
       html += '</div>';
       if (user.device_fp) html += '<div class="user-fp">🖥️ ' + user.device_fp.substring(0, 14) + '...</div>';
@@ -1223,6 +1472,11 @@ function checkSiteActive() {
         html += '<button class="btn-admin-action btn-unlock" onclick="toggleLock(\'' + c + '\',\'active\')">🔓 ปลดล็อค</button>';
       } else {
         html += '<button class="btn-admin-action btn-lock" onclick="toggleLock(\'' + c + '\',\'locked\')">🔒 ล็อค</button>';
+      }
+      if (user.premium) {
+        html += '<button class="btn-admin-action btn-premium-on" onclick="togglePremium(\'' + c + '\',false)">⭐ ยกเลิกพรีเมียม</button>';
+      } else {
+        html += '<button class="btn-admin-action btn-premium-off" onclick="togglePremium(\'' + c + '\',true)">☆ ตั้งพรีเมียม</button>';
       }
       html += '<button class="btn-admin-action btn-reset" onclick="resetDevice(\'' + c + '\')">📱 Reset</button>';
       html += '<button class="btn-admin-action btn-edit" onclick="editUser(\'' + c + '\',\'' + l + '\',\'' + user.expires_at + '\')">✏️ แก้ไข</button>';
@@ -1304,7 +1558,15 @@ function checkSiteActive() {
       var role   = document.getElementById('newRole').value;
       var expiry = document.getElementById('newExpiry').value;
       if (!code || !expiry) { alert('กรุณากรอก รหัส และ วันหมดอายุ'); return; }
-      sbPost('access_codes', { code: code, label: label, role: role, expires_at: expiry })
+      var premEl = document.getElementById('newPremium');
+      var premium = premEl ? premEl.checked : false;
+      sbPost('access_codes', { code: code, label: label, role: role, expires_at: expiry, premium: premium })
+        .then(function() { switchTab('users'); });
+    }
+
+    // ★ PREMIUM: อัป/ปลดพรีเมียมบนรหัสเดิม (ไม่ต้องสมัครใหม่)
+    function togglePremium(code, val) {
+      sbPatch('access_codes?code=eq.' + encodeURIComponent(code), { premium: val })
         .then(function() { switchTab('users'); });
     }
 
@@ -1596,6 +1858,18 @@ function checkSiteActive() {
           card.appendChild(img);
           card.appendChild(btn);
 
+          // ★ PREMIUM: ปุ่มเลือกช่องเพื่อรวมพิมพ์ (โผล่เฉพาะรหัสพรีเมียม + มี file_id)
+          var sess = getSession();
+          if (sess && sess.premium && file.file_id) {
+            var btnPick = document.createElement('button');
+            btnPick.className = 'btn-pick-sheet';
+            btnPick.innerHTML = '✂️ เลือกช่องจากแผ่นนี้ (รวมพิมพ์)';
+            btnPick.onclick = (function(fid) {
+              return function() { openCellOverlay(fid); };
+            })(file.file_id);
+            card.appendChild(btnPick);
+          }
+
           // ปุ่มโฟลเดอร์ต้นทาง (ถ้ามี)
           if (file.folderUrl) {
             var btnFolder = document.createElement('a');
@@ -1609,6 +1883,8 @@ function checkSiteActive() {
 
           container.appendChild(card);
         }
+        // ★ PREMIUM: ถ้ามีของค้างในตะกร้า ให้ตะกร้าโผล่กลับตอนเข้า viewer
+        renderBasket();
       } else {
         // ไม่น่าเกิด แต่ safety net
         container.innerHTML =
@@ -1690,6 +1966,9 @@ function checkSiteActive() {
     function goBack() {
       document.getElementById('viewerSection').style.display = 'none';
       document.getElementById('scanSection').style.display = 'block';
+      // ★ ซ่อนตะกร้าย่อตอนกลับหน้าลิสต์ แต่ไม่ล้างของ (สะสมข้ามรอบ)
+      var mini = document.getElementById('basketMini');
+      if (mini) mini.style.display = 'none';
       document.getElementById('barcode').focus();
     }
 
@@ -1700,6 +1979,201 @@ function checkSiteActive() {
     }
     function hideLoading() {
       document.getElementById('loading').style.display = 'none';
+    }
+
+    /* ════════════════════════════════════════════════════
+       ★ PREMIUM FEATURE: รวมรูปพิมพ์ (Merge & Print)
+       - state ชั่วคราวล้วน (refresh หาย) ตามที่ตกลง
+       - basket = list ยาวได้ถึง 6, เลือกซ้ำได้
+       - crop ด้วย CSS ล้วน (ไม่อ่าน pixel → ไม่ชน CORS)
+       - จอ: thumbnail sz=w800 · พิมพ์: full-res sz=w2000
+       ════════════════════════════════════════════════════ */
+    var mergeBasket = [];              // [{ file_id, cell }]  cell = 0..5
+    var currentSheetFileId = null;     // file_id ของแผ่นที่เปิด overlay อยู่
+
+    function fullResUrl(fileId) {
+      return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w2000';
+    }
+    function thumbUrl(fileId) {
+      return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w800';
+    }
+    // object-position ต่อช่อง (2 คอลัมน์ × 3 แถว) — crop ด้วย transform
+    // ช่อง n: col = n%2 (0=ซ้าย,1=ขวา), row = floor(n/2) (0..2)
+    function cellTransform(n) {
+      var col = n % 2, row = Math.floor(n / 2);
+      // img กว้าง 200% สูง 300% → เลื่อน -50%*col แนวนอน, -33.33%*row แนวตั้ง
+      var tx = col === 0 ? 0 : -50;
+      var ty = -(row * (100 / 3));
+      return 'translate(' + tx + '%,' + ty + '%)';
+    }
+
+    // ── เข้า/ออกโหมดรวมรูป (ยกเลิก — ย้ายไปผูกกับ viewerSection แทน) ──
+    // ฟังก์ชัน enterMergeMode/exitMergeMode/mergeSearchImage/renderMergeResults
+    // ถูกตัดออก เพราะตอนนี้เลือกช่องจากหน้า viewer เดิมโดยตรง (premium)
+
+    // ── Overlay เลือกช่อง ──
+    function openCellOverlay(fileId) {
+      currentSheetFileId = fileId;
+      document.getElementById('cellSheetImg').src = thumbUrl(fileId);
+      var grid = document.getElementById('cellGrid');
+      grid.innerHTML = '';
+      for (var i = 0; i < 6; i++) {
+        var hit = document.createElement('div');
+        hit.className = 'cell-hit';
+        hit.innerHTML = '<span class="num">' + (i + 1) + '</span>' +
+                        '<span class="picked-badge">✓</span>';
+        (function(idx, el) {
+          el.onclick = function() {
+            pickCell(idx);
+            // feedback สั้นๆ ว่าเพิ่งหยิบช่องนี้
+            var b = el.querySelector('.picked-badge');
+            b.style.display = 'flex';
+            setTimeout(function(){ b.style.display = 'none'; }, 400);
+          };
+        })(i, hit);
+        grid.appendChild(hit);
+      }
+      document.getElementById('cellOverlay').style.display = 'block';
+    }
+    function closeCellOverlay() {
+      document.getElementById('cellOverlay').style.display = 'none';
+      currentSheetFileId = null;
+    }
+
+    // ── หยิบช่องเข้าตะกร้า (append, ซ้ำได้, จำกัด 6) ──
+    function pickCell(cell) {
+      if (mergeBasket.length >= 6) {
+        alert('ตะกร้าเต็ม 6 ช่องแล้ว\nลบบางช่องก่อนถ้าอยากเปลี่ยน');
+        return;
+      }
+      mergeBasket.push({ file_id: currentSheetFileId, cell: cell });
+      renderBasket();
+    }
+
+    // ── render ตะกร้า = พรีวิว A4 ย่อ (มุมลอย) + โมดัลเต็มจอ ──
+    function renderBasket() {
+      var mini = document.getElementById('basketMini');
+      // มุมย่อโผล่เฉพาะตอนอยู่หน้า viewer และมีของในตะกร้า
+      var viewerOpen = document.getElementById('viewerSection').style.display !== 'none';
+      mini.style.display = (mergeBasket.length > 0 && viewerOpen) ? 'block' : 'none';
+      document.getElementById('miniCount').innerText = mergeBasket.length;
+      document.getElementById('bmCount').innerText = mergeBasket.length;
+
+      // ── แผ่น A4 ย่อ (มุมลอย) — 6 ช่องเรียงตามตำแหน่งพิมพ์จริง ──
+      var miniA4 = document.getElementById('miniA4');
+      miniA4.innerHTML = '';
+      for (var i = 0; i < 6; i++) {
+        var mc = document.createElement('div');
+        mc.className = 'm-cell';
+        if (mergeBasket[i]) {
+          mc.className += ' filled';
+          var w = document.createElement('div');
+          w.className = 'mc-wrap';
+          var im = document.createElement('img');
+          im.src = thumbUrl(mergeBasket[i].file_id);
+          im.style.transform = cellTransform(mergeBasket[i].cell);
+          im.style.transformOrigin = 'top left';
+          w.appendChild(im);
+          mc.appendChild(w);
+        }
+        miniA4.appendChild(mc);
+      }
+
+      // ── แผ่น A4 ใหญ่ (ในโมดัล) — จิ้มช่องที่มีรูปเพื่อลบ ──
+      var bigA4 = document.getElementById('bigA4');
+      bigA4.innerHTML = '';
+      for (var j = 0; j < 6; j++) {
+        var bc = document.createElement('div');
+        bc.className = 'b-cell';
+        if (mergeBasket[j]) {
+          bc.className += ' filled';
+          var bw = document.createElement('div');
+          bw.className = 'bc-wrap';
+          var bim = document.createElement('img');
+          bim.src = thumbUrl(mergeBasket[j].file_id);
+          bim.style.transform = cellTransform(mergeBasket[j].cell);
+          bim.style.transformOrigin = 'top left';
+          bw.appendChild(bim);
+          var del = document.createElement('div');
+          del.className = 'b-del';
+          del.innerText = '✕';
+          bc.appendChild(bw);
+          bc.appendChild(del);
+          (function(idx) {
+            bc.onclick = function() { mergeBasket.splice(idx, 1); renderBasket(); };
+          })(j);
+        } else {
+          bc.innerHTML = '<span class="b-empty">ว่าง</span>';
+        }
+        bigA4.appendChild(bc);
+      }
+
+      // ตะกร้าว่างเกลี้ยงระหว่างเปิดโมดัล → ปิดโมดัล
+      if (mergeBasket.length === 0) {
+        document.getElementById('basketModal').style.display = 'none';
+      }
+    }
+
+    // ── เปิด/ปิดพรีวิวเต็มจอ (ดูก่อนพิมพ์) ──
+    function openBasketModal() {
+      if (mergeBasket.length === 0) return;
+      renderBasket();
+      document.getElementById('basketModal').style.display = 'block';
+    }
+    function closeBasketModal() {
+      document.getElementById('basketModal').style.display = 'none';
+    }
+
+    function clearBasket() {
+      if (mergeBasket.length === 0) return;
+      if (!confirm('ล้างตะกร้าทั้งหมด?')) return;
+      mergeBasket = [];
+      document.getElementById('basketModal').style.display = 'none';
+      renderBasket();
+    }
+
+    // ── พิมพ์: สร้างแผ่น A4 6 ช่องจาก full-res แล้ว window.print() ──
+    function printBasket() {
+      if (mergeBasket.length === 0) return;
+      // ปิดโมดัลก่อนพิมพ์ กัน overlay ติดในภาพพิมพ์
+      document.getElementById('basketModal').style.display = 'none';
+      var sheet = document.getElementById('printSheet');
+      sheet.innerHTML = '';
+      for (var i = 0; i < 6; i++) {
+        var cellDiv = document.createElement('div');
+        cellDiv.className = 'print-cell';
+        var item = mergeBasket[i];
+        if (item) {
+          var wrap = document.createElement('div');
+          wrap.className = 'crop-wrap';
+          var im = document.createElement('img');
+          im.src = fullResUrl(item.file_id);
+          im.style.transform = cellTransform(item.cell);
+          im.style.transformOrigin = 'top left';
+          wrap.appendChild(im);
+          cellDiv.appendChild(wrap);
+        } else {
+          cellDiv.className += ' empty';
+        }
+        sheet.appendChild(cellDiv);
+      }
+      // รอรูป full-res โหลดก่อนสั่งพิมพ์ (กันพิมพ์ตอนรูปยังว่าง)
+      var imgs = sheet.querySelectorAll('img');
+      if (imgs.length === 0) { window.print(); return; }
+      var loaded = 0, total = imgs.length, done = false;
+      function tryPrint() {
+        if (done) return;
+        done = true;
+        setTimeout(function() { window.print(); }, 150);
+      }
+      imgs.forEach(function(im) {
+        if (im.complete) { loaded++; if (loaded >= total) tryPrint(); }
+        else {
+          im.onload = im.onerror = function() { loaded++; if (loaded >= total) tryPrint(); };
+        }
+      });
+      // safety: ถ้ารูปค้างเกิน 4 วิ พิมพ์เลย
+      setTimeout(tryPrint, 4000);
     }
   </script>
 </body>
