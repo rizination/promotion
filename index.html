@@ -1781,18 +1781,48 @@ function checkSiteActive() {
     }
 
     // ─── Image Viewer ──────────────────────────────────────
-    function openImageViewer(name, keyword) {
-      document.getElementById('scanSection').style.display = 'none';
-      document.getElementById('viewerSection').style.display = 'block';
-      document.getElementById('viewTitle').innerText = name;
-      document.getElementById('imgContainer').innerHTML = '';
-      document.getElementById('folderResults').innerHTML = '';
-      document.getElementById('manualKeyword').value = keyword;
+    // ★ แบบ3: เช็ค device สดตอนเข้า viewer — กันรหัสถูกใช้ซ้อน 2 เครื่อง
+    // ถ้า device_fp ใน DB ไม่ตรงกับเครื่องนี้ (โดน reset+เครื่องอื่น login ไปแล้ว) → เตะออกทันที
+    function verifyDeviceLive() {
+      var sess = getSession();
+      if (!sess || !sess.code) return Promise.resolve(false);
+      if (sess.role === 'admin') return Promise.resolve(true); // admin ไม่ผูก device
+      return sbFetch('access_codes?code=eq.' + encodeURIComponent(sess.code) + '&select=device_fp,status,expires_at')
+        .then(function(rows) {
+          var u = rows && rows[0];
+          if (!u || u.status === 'locked' || isExpired(u.expires_at)) {
+            clearSession();
+            showLoginSection('เซสชันหมดสิทธิ์ กรุณาเข้าสู่ระบบใหม่');
+            return false;
+          }
+          // device_fp ใน DB ถูกยึดไปเครื่องอื่นแล้ว → เตะเครื่องนี้
+          if (u.device_fp && sess.fp && u.device_fp !== sess.fp) {
+            clearSession();
+            showLoginSection('รหัสนี้ถูกใช้งานบนเครื่องอื่นแล้ว กรุณาเข้าสู่ระบบใหม่');
+            return false;
+          }
+          return true;
+        })
+        .catch(function() {
+          return true; // เน็ตล่มเช็คไม่ได้ → ปล่อยผ่าน (offline resilience)
+        });
+    }
 
-      showLoading('🔍 กำลังค้นหารูปโปรโมชั่น โปรดรอสักครู่...');
-      searchDriveImageSupabase(keyword)
-    .then(renderImages)
-    .catch(function(e) { hideLoading(); alert('เกิดข้อผิดพลาด: ' + e.toString()); });
+    function openImageViewer(name, keyword) {
+      verifyDeviceLive().then(function(ok) {
+        if (!ok) return; // โดนเตะแล้ว — verifyDeviceLive จัดการ logout ให้แล้ว
+        document.getElementById('scanSection').style.display = 'none';
+        document.getElementById('viewerSection').style.display = 'block';
+        document.getElementById('viewTitle').innerText = name;
+        document.getElementById('imgContainer').innerHTML = '';
+        document.getElementById('folderResults').innerHTML = '';
+        document.getElementById('manualKeyword').value = keyword;
+
+        showLoading('🔍 กำลังค้นหารูปโปรโมชั่น โปรดรอสักครู่...');
+        searchDriveImageSupabase(keyword)
+          .then(renderImages)
+          .catch(function(e) { hideLoading(); alert('เกิดข้อผิดพลาด: ' + e.toString()); });
+      });
     }
 
     function renderImages(res) {
