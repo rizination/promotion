@@ -2012,28 +2012,66 @@ function checkSiteActive() {
     // ถูกตัดออก เพราะตอนนี้เลือกช่องจากหน้า viewer เดิมโดยตรง (premium)
 
     // ── Overlay เลือกช่อง ──
+    // ★ B2: เช็คสิทธิ์พรีเมียมสดจาก DB ตอนจะใช้สิทธิ์จริง
+    // คืน Promise<boolean> — ถ้าไม่ใช่พรีเมียมแล้ว: ตัดสิทธิ์ทันที (ล้างตะกร้า+ซ่อนปุ่ม)
+    function verifyPremiumLive() {
+      var sess = getSession();
+      if (!sess || !sess.code) return Promise.resolve(false);
+      return sbFetch('access_codes?code=eq.' + encodeURIComponent(sess.code) + '&select=premium,status,expires_at')
+        .then(function(rows) {
+          var u = rows && rows[0];
+          // ถ้ารหัสโดนระงับ/หมดอายุ → เตะออก (คงพฤติกรรมความปลอดภัยเดิม)
+          if (!u || u.status === 'locked' || isExpired(u.expires_at)) {
+            clearSession();
+            showLoginSection('เซสชันหมดสิทธิ์ กรุณาเข้าสู่ระบบใหม่');
+            return false;
+          }
+          var stillPremium = !!u.premium;
+          // อัปเดต session ให้ตรงกับ DB เสมอ
+          sess.premium = stillPremium;
+          saveSession(sess);
+          if (!stillPremium) {
+            // B2: ตัดสิทธิ์ทันที — ล้างตะกร้า, ซ่อนปุ่มเลือกช่อง, กลับเป็นผู้ใช้ธรรมดา
+            mergeBasket = [];
+            document.getElementById('basketMini').style.display = 'none';
+            document.getElementById('basketModal').style.display = 'none';
+            var picks = document.querySelectorAll('.btn-pick-sheet');
+            for (var i = 0; i < picks.length; i++) picks[i].style.display = 'none';
+            alert('สิทธิ์พรีเมียมของรหัสนี้ถูกยกเลิกแล้ว\nระบบกลับสู่การพิมพ์แบบปกติ (ทั้งแผ่น)');
+          }
+          return stillPremium;
+        })
+        .catch(function() {
+          // เน็ตล่ม/เช็คไม่ได้ → อิงค่า session เดิม (offline resilience)
+          return !!(sess && sess.premium);
+        });
+    }
+
+    // ── Overlay เลือกช่อง (ผ่าน live-check ก่อนเสมอ) ──
     function openCellOverlay(fileId) {
-      currentSheetFileId = fileId;
-      document.getElementById('cellSheetImg').src = thumbUrl(fileId);
-      var grid = document.getElementById('cellGrid');
-      grid.innerHTML = '';
-      for (var i = 0; i < 6; i++) {
-        var hit = document.createElement('div');
-        hit.className = 'cell-hit';
-        hit.innerHTML = '<span class="num">' + (i + 1) + '</span>' +
-                        '<span class="picked-badge">✓</span>';
-        (function(idx, el) {
-          el.onclick = function() {
-            pickCell(idx);
-            // feedback สั้นๆ ว่าเพิ่งหยิบช่องนี้
-            var b = el.querySelector('.picked-badge');
-            b.style.display = 'flex';
-            setTimeout(function(){ b.style.display = 'none'; }, 400);
-          };
-        })(i, hit);
-        grid.appendChild(hit);
-      }
-      document.getElementById('cellOverlay').style.display = 'block';
+      verifyPremiumLive().then(function(ok) {
+        if (!ok) return; // ไม่ใช่พรีเมียมแล้ว — verifyPremiumLive จัดการซ่อน/แจ้งเตือนให้แล้ว
+        currentSheetFileId = fileId;
+        document.getElementById('cellSheetImg').src = thumbUrl(fileId);
+        var grid = document.getElementById('cellGrid');
+        grid.innerHTML = '';
+        for (var i = 0; i < 6; i++) {
+          var hit = document.createElement('div');
+          hit.className = 'cell-hit';
+          hit.innerHTML = '<span class="num">' + (i + 1) + '</span>' +
+                          '<span class="picked-badge">✓</span>';
+          (function(idx, el) {
+            el.onclick = function() {
+              pickCell(idx);
+              var b = el.querySelector('.picked-badge');
+              b.style.display = 'flex';
+              setTimeout(function(){ b.style.display = 'none'; }, 400);
+            };
+          })(i, hit);
+          grid.appendChild(hit);
+        }
+        document.getElementById('cellOverlay').style.display = 'block';
+      });
     }
     function closeCellOverlay() {
       document.getElementById('cellOverlay').style.display = 'none';
