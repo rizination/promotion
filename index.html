@@ -808,18 +808,20 @@
     #printSheet { display: none; }
     @media print {
       /* เอา UI เดิมออกจาก layout จริง (ไม่ใช่แค่ซ่อน) กันมันกินหน้ากระดาษ */
+      html, body { margin: 0 !important; padding: 0 !important; height: auto !important; }
       #loginSection, #adminSection,
       #appWrapper > .header, #appWrapper > .container,
       #basketMini, #basketModal, #cellOverlay { display: none !important; }
       #printSheet {
         display: grid !important; position: absolute; left: 0; top: 0;
-        width: 194mm; grid-template-columns: 97mm 97mm;
-        grid-template-rows: 93.6mm 93.6mm 93.6mm;
+        width: 194mm; height: 276mm; overflow: hidden;
+        grid-template-columns: 97mm 97mm;
+        grid-template-rows: 92mm 92mm 92mm;
         gap: 0; margin: 0; padding: 0;
       }
       .print-cell {
         position: relative; overflow: hidden;
-        width: 97mm; height: 93.6mm; page-break-inside: avoid;
+        width: 97mm; height: 92mm; page-break-inside: avoid;
       }
       .print-cell .crop-wrap { position: absolute; inset: 0; overflow: hidden; }
       .print-cell .crop-wrap img { position: absolute; width: 200%; height: 300%; max-width: none; }
