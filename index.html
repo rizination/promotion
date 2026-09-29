@@ -803,6 +803,24 @@
     }
     .btn-bm-print:active { opacity: 0.9; }
     .bm-note { font-size: 12px; color: var(--text-muted); text-align: center; margin: 10px 2px 0; }
+        /* ★ ปุ่มลอยแผ่นพิมพ์ (หน้าสแกน) */
+    #printFab {
+      display: none; position: fixed; right: 14px; z-index: 8000;
+      bottom: calc(18px + env(safe-area-inset-bottom));
+      width: 58px; height: 58px; border-radius: 50%;
+      background: #F57F17; color: #fff; border: 3px solid #fff;
+      font-size: 26px; line-height: 1;
+      align-items: center; justify-content: center;
+      box-shadow: 0 4px 14px rgba(245,127,23,0.4); cursor: pointer;
+    }
+    #printFab:active { transform: scale(0.95); }
+    .fab-count {
+      position: absolute; top: -6px; right: -8px;
+      background: var(--danger); color: #fff; font-size: 11px; font-weight: 800;
+      border-radius: 10px; padding: 2px 6px; border: 2px solid #fff;
+      font-family: 'Sarabun', sans-serif;
+    }
+    #scanSection { padding-bottom: 80px; } /* กันปุ่มลอยบังปุ่มเปลี่ยนหน้า */
 
     /* ════════════ PRINT: แผ่นรวม A4 ════════════ */
     #printSheet { display: none; }
@@ -815,7 +833,7 @@
       }
       #loginSection, #adminSection,
       #appWrapper > .header, #appWrapper > .container,
-      #basketMini, #basketModal, #cellOverlay { display: none !important; }
+      #basketMini, #basketModal, #cellOverlay, #printFab { display: none !important; }
       /* กันทุก element สร้างหน้าใหม่ */
       #printSheet, #printSheet * {
         page-break-before: avoid !important;
@@ -969,7 +987,7 @@
 
     <!-- ═══ VIEWER SECTION ═══ -->
     <div id="viewerSection">
-      <button class="btn-back" onclick="goBack()">⬅️ กลับไปหน้ารายการ</button>
+      <button class="btn-back" onclick="navBack()">⬅️ กลับไปหน้ารายการ</button>
       <div class="viewer-title" id="viewTitle">-</div>
       <div id="imgContainer"></div>
 
@@ -988,7 +1006,7 @@
     <div class="cell-overlay-inner">
       <div class="cell-overlay-head">
         <span class="t">จิ้มช่องที่ต้องการ</span>
-        <button class="btn-overlay-close" onclick="closeCellOverlay()">✕</button>
+        <button class="btn-overlay-close" onclick="navCloseLayer('overlay')">✕</button>
       </div>
       <div class="cell-sheet-wrap">
         <img id="cellSheetImg" src="" alt="แผ่นโปรโมชั่น">
@@ -1004,13 +1022,14 @@
     <div class="mini-a4" id="miniA4"></div>
     <div class="mini-badge"><span><b id="miniCount">0</b>/6</span><span class="tap-hint">แตะดู</span></div>
   </div>
-
+  <!-- ═══ ★ ปุ่มลอยแผ่นพิมพ์ (หน้าสแกน) ═══ -->
+  <div id="printFab" onclick="openBasketModal()">🖨️<span class="fab-count"><span id="fabCount">0</span>/6</span></div>
   <!-- ═══ ★ พรีวิว A4 เต็มจอ (ดูก่อนพิมพ์ + จิ้มลบ + พิมพ์) ═══ -->
   <div id="basketModal">
     <div class="basket-modal-inner">
       <div class="bm-head">
         <span class="bm-title">แผ่นพิมพ์ <b id="bmCount">0</b>/6</span>
-        <button class="btn-bm-close" onclick="closeBasketModal()">✕</button>
+        <button class="btn-bm-close" onclick="navCloseLayer('modal')">✕</button>
       </div>
       <div class="big-a4" id="bigA4"></div>
       <div class="bm-actions">
@@ -1345,6 +1364,8 @@ function checkSiteActive() {
       checkSiteActive();
       loadFromLocal();
       setupAppListeners();
+      if (isViewerOpen()) goBack();  // login ใหม่หลังโดนเตะกลาง viewer → กลับหน้าหลัก
+      initNav();
     }
     function showAdminSection() {
       document.getElementById('loginSection').style.display = 'none';
@@ -1828,6 +1849,10 @@ function checkSiteActive() {
         if (!ok) return; // โดนเตะแล้ว — verifyDeviceLive จัดการ logout ให้แล้ว
         document.getElementById('scanSection').style.display = 'none';
         document.getElementById('viewerSection').style.display = 'block';
+        renderBasket(); // สลับปุ่มลอย → พรีวิวย่อ ทันทีที่เข้า viewer
+        if (!(history.state && history.state.pf === 'viewer')) {
+          history.pushState({ pf: 'viewer' }, '');
+        }
         document.getElementById('viewTitle').innerText = name;
         document.getElementById('imgContainer').innerHTML = '';
         document.getElementById('folderResults').innerHTML = '';
@@ -2011,11 +2036,62 @@ function checkSiteActive() {
     function goBack() {
       document.getElementById('viewerSection').style.display = 'none';
       document.getElementById('scanSection').style.display = 'block';
-      // ★ ซ่อนตะกร้าย่อตอนกลับหน้าลิสต์ แต่ไม่ล้างของ (สะสมข้ามรอบ)
-      var mini = document.getElementById('basketMini');
-      if (mini) mini.style.display = 'none';
+      // ★ กลับหน้าลิสต์: สลับพรีวิวย่อ → ปุ่มลอยเครื่องพิมพ์ (ของยังอยู่)
+      renderBasket();
       document.getElementById('barcode').focus();
     }
+
+        // ─── History / ปุ่ม Back มือถือ + H/H ─────────────────
+    var _navReady = false;
+    function initNav() {
+      if (!_navReady) {
+        _navReady = true;
+        history.replaceState({ pf: 'guard' }, '');  // ด่านกันออก
+        history.pushState({ pf: 'scan' }, '');
+      } else {
+        history.replaceState({ pf: 'scan' }, '');   // login ซ้ำ → รีเซ็ตเป็นหน้าหลัก
+      }
+    }
+    function isViewerOpen() {
+      return document.getElementById('viewerSection').style.display === 'block';
+    }
+    // ปุ่มกลับบนจอ → ถอยประวัติแทน (กันขั้นค้าง)
+    function navBack() {
+      if (history.state && history.state.pf === 'viewer') history.back();
+      else goBack();
+    }
+        // ปิดป๊อปอัปจากในโค้ด/ปุ่ม ✕ → ปิดทันที แล้วถอยประวัติให้ตรง
+    function navCloseLayer(kind) {
+      if (kind === 'overlay') closeCellOverlay(); else closeBasketModal();
+      if (history.state && history.state.pf === kind) history.back();
+    }
+    window.addEventListener('popstate', function(e) {
+      // หน้า Login / Admin ไม่ยุ่ง
+      if (document.getElementById('appWrapper').style.display !== 'block') return;
+      var st = e.state || {};
+
+      // เดินหน้า (forward) เข้าป๊อปอัป → ไม่เปิดซ้ำ แค่ปรับสถานะให้ตรงจอ
+      if (st.pf === 'overlay' || st.pf === 'modal') {
+        history.replaceState({ pf: isViewerOpen() ? 'viewer' : 'scan' }, '');
+        return;
+      }
+
+      // ปิดป๊อปอัปที่ค้างอยู่ (ชั้นบนสุด)
+      closeCellOverlay();
+      closeBasketModal();
+
+      if (st.pf === 'viewer') {
+        if (!isViewerOpen()) history.replaceState({ pf: 'scan' }, ''); // forward กลับ viewer → ไม่เปิดซ้ำ
+        return;
+      }
+      if (st.pf === 'scan') {
+        if (isViewerOpen()) goBack();
+        return;
+      }
+      // ถึงด่านกัน → วางด่านใหม่ ไม่หลุดออก
+      if (isViewerOpen()) goBack();
+      history.pushState({ pf: 'scan' }, '');
+    });
 
     // ─── Loading Helpers ───────────────────────────────────
     function showLoading(msg) {
@@ -2116,6 +2192,7 @@ function checkSiteActive() {
           grid.appendChild(hit);
         }
         document.getElementById('cellOverlay').style.display = 'block';
+        if (!(history.state && history.state.pf === 'overlay')) history.pushState({ pf: 'overlay' }, '');
       });
     }
     function closeCellOverlay() {
@@ -2136,11 +2213,14 @@ function checkSiteActive() {
     // ── render ตะกร้า = พรีวิว A4 ย่อ (มุมลอย) + โมดัลเต็มจอ ──
     function renderBasket() {
       var mini = document.getElementById('basketMini');
-      // มุมย่อโผล่เฉพาะตอนอยู่หน้า viewer และมีของในตะกร้า
-      var viewerOpen = document.getElementById('viewerSection').style.display !== 'none';
-      mini.style.display = (mergeBasket.length > 0 && viewerOpen) ? 'block' : 'none';
+      var fab  = document.getElementById('printFab');
+      var hasItems   = mergeBasket.length > 0;
+      var viewerOpen = document.getElementById('viewerSection').style.display === 'block';
+      // viewer → พรีวิว A4 ย่อ | หน้าสแกน → ปุ่มลอยเครื่องพิมพ์
+      mini.style.display = (hasItems && viewerOpen)  ? 'block' : 'none';
+      fab.style.display  = (hasItems && !viewerOpen) ? 'flex'  : 'none';
+      document.getElementById('fabCount').innerText  = mergeBasket.length;
       document.getElementById('miniCount').innerText = mergeBasket.length;
-      document.getElementById('bmCount').innerText = mergeBasket.length;
 
       // ── แผ่น A4 ย่อ (มุมลอย) — 6 ช่องเรียงตามตำแหน่งพิมพ์จริง ──
       var miniA4 = document.getElementById('miniA4');
@@ -2192,8 +2272,8 @@ function checkSiteActive() {
       }
 
       // ตะกร้าว่างเกลี้ยงระหว่างเปิดโมดัล → ปิดโมดัล
-      if (mergeBasket.length === 0) {
-        document.getElementById('basketModal').style.display = 'none';
+      if (mergeBasket.length === 0 && document.getElementById('basketModal').style.display === 'block') {
+        navCloseLayer('modal');
       }
     }
 
@@ -2202,6 +2282,7 @@ function checkSiteActive() {
       if (mergeBasket.length === 0) return;
       renderBasket();
       document.getElementById('basketModal').style.display = 'block';
+      if (!(history.state && history.state.pf === 'modal')) history.pushState({ pf: 'modal' }, '');
     }
     function closeBasketModal() {
       document.getElementById('basketModal').style.display = 'none';
@@ -2211,15 +2292,15 @@ function checkSiteActive() {
       if (mergeBasket.length === 0) return;
       if (!confirm('ล้างตะกร้าทั้งหมด?')) return;
       mergeBasket = [];
-      document.getElementById('basketModal').style.display = 'none';
+      navCloseLayer('modal');
       renderBasket();
     }
 
     // ── พิมพ์: สร้างแผ่น A4 6 ช่องจาก full-res แล้ว window.print() ──
     function printBasket() {
       if (mergeBasket.length === 0) return;
-      // ปิดโมดัลก่อนพิมพ์ กัน overlay ติดในภาพพิมพ์
-      document.getElementById('basketModal').style.display = 'none';
+      // ปิดโมดัลก่อนพิมพ์ กัน overlay ติดในภาพพิมพ์ (+ ถอยประวัติให้ตรง)
+      navCloseLayer('modal');
       var sheet = document.getElementById('printSheet');
       sheet.innerHTML = '';
       for (var i = 0; i < 6; i++) {
