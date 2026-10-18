@@ -1112,13 +1112,360 @@ function searchMultipleProductsSupabase(barcodes, tomorrowMode) {
   });
 }
 
-// ── 2) ค้นหารูปจาก OCR ────────────────────────────────
+// ==== SEARCH V2 START ====
+// ── 2) ค้นหารูปจาก OCR (แบบใหม่: ยี่ห้อ → ชนิด → ส่วนขยาย → ขนาด) ──
+// โหลด OCR ทั้งหมดครั้งเดียวต่อการเข้าใช้ แล้วเทียบทีละบรรทัดใน description
+// (1 บรรทัด = 1 สินค้าในแผ่น) ถ้าตรง → แสดงรูปทั้งแผ่นเหมือนเดิม
+// ถ้าโหลด OCR ไม่ได้ → กลับไปใช้ searchDriveImageLegacy() แบบเดิม
+
+// ชื่อที่ถือเป็นยี่ห้อเดียวกัน (ตัวแรก = ชื่อหลัก) — รวมคำย่อในระบบ และคำที่ OCR อ่านเพี้ยน
+var SR_BRAND_ALIASES = [
+  ['เด็กสมบูรณ์', 'DSB'],
+  ['คาร์เนชั่น', 'คาร์เนชัน', 'CARNATION'],
+  ['ทีพอท', 'Tea Pot'],
+  ['ไชโย', 'ไซโย'],
+  ['คุณอร', 'คุณออ'],
+  ['ไวท์ดั๊ก', 'WD'],
+  ['ดั๊กคิง', 'DK', 'ดั๊กกิง'],
+  ['สวีทฮาร์ท', 'SWEETHEART', 'หวานใจ'],
+  ['เอเอฟเอ็ม', 'AFM']
+];
+var SR_MIN_COVERAGE = 0.65;          // ยี่ห้อตรงแล้ว: ชนิด+ส่วนขยายต้องตรงในบรรทัดเดียวกันอย่างน้อยเท่านี้
+var SR_MIN_COVERAGE_NOBRAND = 0.8;   // หายี่ห้อในคำค้นไม่เจอ: ต้องตรงมากกว่า กันได้ยี่ห้ออื่นที่ชนิดคล้ายกัน
+var SR_NOISE_WORDS  = ['ตรา','แพ็ค','แพค','แพ็ก','แพ็คละ','แพคละ','ขวด','ซอง','ชิ้น','ลัง','โหล',
+                       'pack','pac','pak','bag','box','ea','bt','tay','can','แถม','ฟรี','ขนาด','ละ'];
+var SR_SIZE_RE = /(\d+(?:[.,]\d+)*)\s*(มิลลิลิตร|มล\.?|ml|cc|ซีซี|ลิตร|ltr|l|กิโลกรัม|กก\.?|kg|กรัม|ก\.|grams?|gm|gr|g)(?![a-z\u0e01-\u0e2e])/gi;
+
+// ตัดช่องว่าง/เครื่องหมาย ให้ "พันท้ายน้ำจิ้ม" = "พันท้าย น้ำจิ้ม"
+function srNorm(s) {
+  return String(s || '').toLowerCase()
+    .replace(/\u0e4d\u0e32/g, '\u0e33')                 // ํ + า → ำ
+    .replace(/[\u200b-\u200d\ufeff]/g, '')
+    .replace(/[\s\-–_\/\\:;|.,()\[\]{}"'`+*&!?#%]/g, '');
+}
+
+// เทียบแบบหลวม (ยี่ห้อ / ชื่อที่สะกดต่างเล็กน้อย): ไม่สนวรรณยุกต์ ไม้ไต่คู้ การันต์ สระอะ
+// และถือ ซ = ช (OCR อ่านพวกนี้เพี้ยนบ่อย เช่น ฉั่วะฮะเส็ง, เพาช์/เพาซ์)
+function srLoose(s) {
+  return String(s || '').replace(/[ะ็-์]/g, '').replace(/ซ/g, 'ช');
+}
+
+var srAliasList = null;
+function srApplyAliases(n) {
+  if (!srAliasList) {
+    srAliasList = [];
+    SR_BRAND_ALIASES.forEach(function(group) {
+      var main = srNorm(group[0]);
+      group.slice(1).forEach(function(v) { srAliasList.push({ from: srNorm(v), to: main }); });
+    });
+    srAliasList.sort(function(a, b) { return b.from.length - a.from.length; });
+  }
+  srAliasList.forEach(function(a) {
+    if (a.from.length <= 3) return;                     // ตัวย่อสั้น (WD, DK) แทนแบบทั้งคำใน srAliasText เท่านั้น
+    if (n.indexOf(a.from) !== -1) n = n.split(a.from).join(a.to);
+  });
+  return n;
+}
+
+// ทำข้อความให้พร้อมเทียบ: แทนตัวย่อสั้นเฉพาะเมื่อเป็นทั้งคำ หรือขึ้นต้นคำแล้วตามด้วยภาษาไทย
+// (WD → ไวท์ดั๊ก, "WDไส้เป็ด" → "ไวท์ดั๊กไส้เป็ด" แต่ไม่แตะตัวอักษรกลางคำอื่น)
+function srAliasText(text) {
+  srApplyAliases('');                                   // สร้างรายการ alias ถ้ายังไม่มี
+  var out = String(text || '').split(/\s+/).map(function(t) {
+    var n = srNorm(t);
+    for (var i = 0; i < srAliasList.length; i++) {
+      var a = srAliasList[i];
+      if (a.from.length > 3) continue;
+      if (n === a.from) return a.to;
+      if (n.indexOf(a.from) === 0 && !/[a-z0-9]/.test(n.charAt(a.from.length))) return a.to + n.substr(a.from.length);
+    }
+    return n;
+  }).join('');
+  return srApplyAliases(out);
+}
+
+// ดึงขนาดออกจากข้อความ → [{kind:'ml'|'g', val}] (แปลงลิตร/กก. เป็นหน่วยฐานแล้ว)
+function srExtractSizes(text) {
+  var sizes = [];
+  var rest = String(text || '').replace(SR_SIZE_RE, function(m, num, unit) {
+    var u = unit.toLowerCase().replace(/\.$/, '');
+    var val = parseFloat(num.replace(/,/g, ''));
+    var kind = 'g', mul = 1;
+    if (/^(มิลลิลิตร|มล|ml|cc|ซีซี)$/.test(u))      { kind = 'ml'; }
+    else if (/^(ลิตร|ltr|l)$/.test(u))             { kind = 'ml'; mul = 1000; }
+    else if (/^(กิโลกรัม|กก|kg)$/.test(u))          { mul = 1000; }
+    if (!isNaN(val)) sizes.push({ kind: kind, val: Math.round(val * mul * 100) / 100 });
+    return ' ';
+  });
+  return { sizes: sizes, rest: rest };
+}
+
+function srBuildIndex(rows) {
+  var lines = [];
+  var firstCount = {};
+  rows.forEach(function(row, ri) {
+    String(row.description || '').split('\n').forEach(function(raw) {
+      raw = raw.trim();
+      if (!raw) return;
+      var firstRaw = raw.split(/\s+/)[0];
+      var first = srAliasText((firstRaw));
+      var line = { row: ri, raw: raw, firstRaw: firstRaw, first: first,
+                   norm: srAliasText((raw)), sizes: srExtractSizes(raw).sizes };
+      lines.push(line);
+      if (first) firstCount[first] = (firstCount[first] || 0) + 1;
+    });
+  });
+
+  // คำแรกของบรรทัดที่เป็นยี่ห้อจริง: ต้องเจอเป็นคำแรกบ่อยกว่าเจอปนกลางชื่อสินค้าอื่น
+  // (กันคำชนิดอย่าง "ปลาหมึก" "ผงปรุงรส" ที่บางบรรทัดไม่มียี่ห้อ)
+  var brands = {};
+  Object.keys(firstCount).forEach(function(b) {
+    if (b.length < 1 || /^\d+$/.test(b) || b === 'ตรา') return;
+    var inner = 0;
+    for (var i = 0; i < lines.length; i++) {
+      var l = lines[i];
+      if (l.first === b) continue;
+      if (b.length > 3 && l.first.indexOf(b) !== -1) continue; // ยี่ห้อติดกับชื่อสินค้าในคำแรก ยังนับเป็นตำแหน่งยี่ห้อ
+      if (b.length <= 3) {
+        if (l.raw.split(/\s+/).slice(1).some(function(t) { return srAliasText((t)) === b; })) inner++;
+      } else if (l.norm.indexOf(b) !== -1) inner++;
+      if (inner > firstCount[b]) return;
+    }
+    brands[b] = true;
+  });
+  SR_BRAND_ALIASES.forEach(function(g) { brands[srNorm(g[0])] = true; });
+
+  return { rows: rows, lines: lines, brands: Object.keys(brands) };
+}
+
+function srParseQuery(keyword, idx) {
+  var raw = String(keyword || '').replace(/(\d),(?=\d{3}(?:\D|$))/g, '$1');
+  var sz = srExtractSizes(raw);
+  var tokens = sz.rest
+    .replace(/\d+\s*[xX×]\s*\d+/g, ' ')                  // 1X12, 3x4 (จำนวนแพ็ก ไม่ใช่ขนาด)
+    .replace(/[(),"\\]/g, ' ')
+    .split(/\s+/)
+    .filter(function(t) { return t && SR_NOISE_WORDS.indexOf(t.toLowerCase().replace(/\.$/, '')) === -1; });
+  var normTokens = tokens.map(function(t) { return srAliasText((t)); });
+  var norm = srAliasText((tokens.join(' ')));
+
+  // หายี่ห้อในคำค้น: ยี่ห้อสั้น (≤3 ตัว) ต้องตรงทั้งคำ, ยาวกว่านั้นหาเป็นส่วนของข้อความได้
+  var found = idx.brands.filter(function(b) {
+    return b.length <= 3 ? normTokens.indexOf(b) !== -1 : norm.indexOf(b) !== -1;
+  });
+  // ถ้ายี่ห้อหนึ่งเป็นส่วนของอีกยี่ห้อ (หมี / ตราหมี) เก็บตัวที่ยาวกว่า
+  found = found.filter(function(b) {
+    return !found.some(function(o) { return o !== b && o.length > b.length && o.indexOf(b) !== -1; });
+  });
+  return { norm: norm, sizes: sz.sizes, brands: found };
+}
+
+// สัดส่วนของ "ชนิด+ส่วนขยาย" ในคำค้นที่พบในบรรทัด (เทียบทีละ 3 ตัวอักษร ทนพิมพ์ผิดเล็กน้อย)
+function srCoverage(need, body) {
+  if (!need) return 1;
+  if (need.length < 3) return body.indexOf(need) !== -1 ? 1 : 0;
+  var total = 0, hit = 0, seen = {};
+  for (var i = 0; i + 3 <= need.length; i++) {
+    var g = need.substr(i, 3);
+    if (seen[g]) continue;
+    seen[g] = true; total++;
+    if (body.indexOf(g) !== -1) hit++;
+  }
+  return hit / total;
+}
+
+// pat อยู่ใน text โดยพิมพ์ต่างกันได้ไม่เกิน maxDist ตัวอักษร (edit distance เทียบช่วงที่ใกล้ที่สุดใน text)
+function srFuzzyContains(pat, text, maxDist) {
+  if (text.indexOf(pat) !== -1) return true;
+  var m = pat.length, n = text.length, prev = [], cur = [], i, j;
+  for (i = 0; i <= m; i++) prev[i] = i;
+  for (j = 1; j <= n; j++) {
+    cur[0] = 0;
+    for (i = 1; i <= m; i++) {
+      cur[i] = Math.min(prev[i] + 1, cur[i - 1] + 1,
+                        prev[i - 1] + (pat.charAt(i - 1) === text.charAt(j - 1) ? 0 : 1));
+    }
+    if (cur[m] <= maxDist) return true;
+    var t = prev; prev = cur; cur = t;
+  }
+  return false;
+}
+
+function srMatchLine(line, q, ignoreBrand) {
+  var need = q.norm, brandHit = null;
+  if (q.brands.length && !ignoreBrand) {
+    var looseFirst = srLoose(line.first), looseLine = srLoose(line.norm), lineBrand = '';
+    for (var i = 0; i < q.brands.length; i++) {
+      var b = q.brands[i], lb = srLoose(b);
+      var ok = b.length <= 3 ? looseFirst === lb
+                             : (looseFirst.indexOf(lb) !== -1 || looseLine.indexOf(lb) === 0);
+      if (ok) { brandHit = b; lineBrand = line.first; break; }
+    }
+    if (!brandHit) return null;
+    need = need.split('ตรา' + brandHit).join('').split(brandHit).join('');
+  }
+  var cov = srCoverage(need, line.norm);
+  // ยี่ห้อตรงแล้ว และชื่อบนป้ายอยู่ในคำค้นครบ (ต่างได้ 1–2 ตัวอักษร เช่น เพาช์/เพาซ์)
+  // เช่น ป้าย "โรซ่า ซอสมะเขือเทศ" กับคำค้น "ซอสมะเขือเทศ โรซ่า (ขวดบีบ)" → ถือว่าตรง
+  if (brandHit && cov < SR_MIN_COVERAGE) {
+    var lineRest = srLoose(line.norm.substr(lineBrand.length)), looseNeed = srLoose(need);
+    if (lineRest.length >= 4 &&
+        srCoverage(lineRest, looseNeed) >= 0.8 &&
+        srFuzzyContains(lineRest, looseNeed, Math.max(1, Math.floor(lineRest.length * 0.12)))) {
+      cov = 0.9;
+    }
+  }
+  if (cov < (brandHit ? SR_MIN_COVERAGE : SR_MIN_COVERAGE_NOBRAND)) return null;
+
+  // ขนาด: คัดออกเฉพาะเมื่อทั้งสองฝั่งมีขนาดชนิดเดียวกันแต่ไม่ตรงกัน
+  var sizeMatch = false;
+  if (q.sizes.length && line.sizes.length) {
+    var sameKind = false;
+    q.sizes.forEach(function(a) {
+      line.sizes.forEach(function(s) {
+        if (a.kind !== s.kind) return;
+        sameKind = true;
+        if (Math.abs(a.val - s.val) < 0.01) sizeMatch = true;
+      });
+    });
+    if (sameKind && !sizeMatch) return null;
+  }
+  return { score: cov + (sizeMatch ? 0.5 : 0), line: line };
+}
+
+function srFileOf(row, group) {
+  return {
+    file_id:      row.file_id,
+    thumbnailUrl: 'https://drive.google.com/thumbnail?id=' + row.file_id + '&sz=w800',
+    viewUrl:      'https://drive.google.com/file/d/' + row.file_id + '/view',
+    folderUrl:    row.folder_id ? 'https://drive.google.com/drive/folders/' + row.folder_id : null,
+    group:        group
+  };
+}
+
+function srFoldersOf(rowIdxList, rows) {
+  var map = {}, out = [];
+  rowIdxList.forEach(function(ri) {
+    var row = rows[ri];
+    if (row.folder_id && !map[row.folder_id]) {
+      map[row.folder_id] = true;
+      out.push({ folderId: row.folder_id, folderName: row.folder_name,
+                 folderUrl: 'https://drive.google.com/drive/folders/' + row.folder_id });
+    }
+  });
+  return out;
+}
+
+// ชื่อกลุ่มยี่ห้อที่แสดง: ถ้าเป็นชื่อในตาราง alias ใช้ชื่อหลัก (คุณออ → คุณอร)
+function srGroupLabel(line) {
+  for (var i = 0; i < SR_BRAND_ALIASES.length; i++) {
+    if (line.first === srNorm(SR_BRAND_ALIASES[i][0])) return SR_BRAND_ALIASES[i][0];
+  }
+  return line.firstRaw;
+}
+
+function srSearch(idx, keyword) {
+  var q = srParseQuery(keyword, idx);
+  if (!q.norm && !q.sizes.length) return { success: true, usedFallback: false, files: [] };
+
+  // หาบรรทัดที่ดีที่สุดของแต่ละรูป
+  var best = {};
+  idx.lines.forEach(function(line) {
+    var m = srMatchLine(line, q, false);
+    if (m && (!best[line.row] || m.score > best[line.row].score)) best[line.row] = m;
+  });
+  var hitRows = Object.keys(best).map(Number);
+
+  if (hitRows.length === 0) {
+    // ไม่พบ → แสดงโฟลเดอร์ (ไม่แสดงรูปยี่ห้ออื่นแทน)
+    var near = [];
+    idx.lines.forEach(function(line) {
+      if (srMatchLine(line, q, true) && near.indexOf(line.row) === -1) near.push(line.row);
+    });
+    if (near.length === 0) near = idx.rows.map(function(r, i) { return i; });
+    var brandName = q.brands.length ? q.brands[0] : '';
+    return {
+      success: true, usedFallback: true,
+      folders: srFoldersOf(near, idx.rows),
+      message: brandName
+        ? '📁 ไม่พบรูปของยี่ห้อนี้ — เลือกโฟลเดอร์เพื่อค้นหาต่อ'
+        : '📁 ไม่พบรูปใน Index — เลือกโฟลเดอร์เพื่อค้นหาต่อ'
+    };
+  }
+
+  // มียี่ห้อในคำค้น → เรียงตามคะแนน / ไม่มียี่ห้อ → จัดกลุ่มตามยี่ห้อในรูป
+  var grouped = q.brands.length === 0;
+  var label = {}, groupScore = {};
+  hitRows.forEach(function(ri) {
+    var g = srGroupLabel(best[ri].line);
+    label[ri] = g;
+    groupScore[g] = Math.max(groupScore[g] || 0, best[ri].score);
+  });
+  hitRows.sort(function(a, b) {
+    if (grouped && label[a] !== label[b]) {
+      var d = groupScore[label[b]] - groupScore[label[a]];
+      return d || (label[a] < label[b] ? -1 : 1);
+    }
+    return best[b].score - best[a].score;
+  });
+
+  var groups = {};
+  hitRows.forEach(function(ri) { groups[label[ri]] = true; });
+  return {
+    success: true, usedFallback: false,
+    grouped: grouped && Object.keys(groups).length > 1,
+    files: hitRows.map(function(ri) { return srFileOf(idx.rows[ri], label[ri]); })
+  };
+}
+
+// โหลด ocr_cache ทั้งหมดทีละหน้า (ไม่พึ่ง limit สูงสุดของ Supabase)
+var srIndexPromise = null;
+function srFetchAllOcr(offset, acc, page) {
+  return sbFetch('ocr_cache?select=file_id,folder_id,folder_name,description&order=file_id.asc&limit=1000&offset=' + offset)
+    .then(function(rows) {
+      if (!Array.isArray(rows)) throw new Error('โหลด OCR ไม่สำเร็จ');
+      if (rows.length === 0 || page >= 20) return acc;
+      return srFetchAllOcr(offset + rows.length, acc.concat(rows), page + 1);
+    });
+}
+function srLoadIndex() {
+  if (!srIndexPromise) {
+    srIndexPromise = srFetchAllOcr(0, [], 0).then(function(rows) {
+      if (rows.length === 0) throw new Error('ไม่มีข้อมูล OCR');
+      return srBuildIndex(rows);
+    });
+    srIndexPromise.catch(function() { srIndexPromise = null; }); // ครั้งหน้าลองโหลดใหม่
+  }
+  return srIndexPromise;
+}
+
 function searchDriveImageSupabase(keyword) {
+  return srLoadIndex().then(function(idx) {
+    try {
+      return srSearch(idx, keyword);
+    } catch (e) {
+      console.warn('ค้นหาแบบใหม่ผิดพลาด → ใช้แบบเดิม', e);
+      return searchDriveImageLegacy(keyword);
+    }
+  }, function(err) {
+    console.warn('โหลด OCR ไม่ได้ → ใช้การค้นหาแบบเดิม', err);
+    return searchDriveImageLegacy(keyword);
+  });
+}
+// ==== SEARCH V2 END ====
+
+// ── 2.1) ค้นหารูปจาก OCR แบบเดิม (สำรอง ใช้เมื่อโหลด OCR ทั้งหมดไม่ได้) ──
+function searchDriveImageLegacy(keyword) {
   // ── 1) split & กรอง token ──────────────────────────
   var UNIT_PATTERN = /^\d+[\w\.%]*$/;          // 300g, 2KG, 180มล, 7มม, 600
   var UNIT_WORDS   = ["มล","กรัม","กก","มม","kg","g.","g","ml","mm","แพ็คละ","แพ็ค"];
 
-  var filtered = keyword.trim().split(/\s+/).filter(function(t) {
+  // Clean only the search copy; keep product names and OCR descriptions intact.
+  // Preserve words inside parentheses and keep thousands such as 1,000 together.
+  var searchText = String(keyword || '')
+    .replace(/(\d),(?=\d{3}(?:\D|$))/g, '$1')
+    .replace(/[(),"\\]/g, ' ');
+  var filtered = searchText.trim().split(/\s+/).filter(function(t) {
     if (t.length < 3) return false;                            // สั้นเกิน
     if (UNIT_PATTERN.test(t)) return false;                    // ตัวเลข+หน่วย
     if (UNIT_WORDS.indexOf(t.toLowerCase()) !== -1) return false; // คำหน่วย
@@ -1155,7 +1502,9 @@ function searchDriveImageSupabase(keyword) {
 
   // ── 4) OR filter → Supabase ────────────────────────
   var orFilter = tokens.map(function(t) {
-    return 'description.ilike.*' + encodeURIComponent(t) + '*';
+    // Quote filter values so punctuation remains data in PostgREST's OR grammar.
+    var pattern = ('*' + t + '*').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return 'description.ilike.' + encodeURIComponent('"' + pattern + '"');
   }).join(',');
 
   var path = 'ocr_cache?or=(' + orFilter + ')&select=file_id,folder_id,folder_name,description&limit=5000';
@@ -1202,11 +1551,15 @@ function searchDriveImageSupabase(keyword) {
 
 // ── 3) ค้นหาโฟลเดอร์จาก keyword ──────────────────────
 function searchFolderFallbackSupabase(keyword) {
-  var tokens = keyword.trim().split(/\s+/).filter(function(t) { return t.length > 0; });
+  var searchText = String(keyword || '')
+    .replace(/(\d),(?=\d{3}(?:\D|$))/g, '$1')
+    .replace(/[(),"\\]/g, ' ');
+  var tokens = searchText.trim().split(/\s+/).filter(function(t) { return t.length > 0; });
   if (tokens.length === 0) return Promise.resolve({ success: true, folders: [] });
 
   var orFilter = tokens.map(function(t) {
-    return 'description.ilike.*' + encodeURIComponent(t) + '*';
+    var pattern = ('*' + t + '*').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return 'description.ilike.' + encodeURIComponent('"' + pattern + '"');
   }).join(',');
 
   var path = 'ocr_cache?or=(' + orFilter + ')&select=folder_id,folder_name&limit=5000';
@@ -1874,7 +2227,7 @@ function checkSiteActive() {
       if (res.success && res.usedFallback) {
         var header = document.createElement('div');
         header.style.cssText = 'padding:14px 0 10px;font-weight:800;color:var(--blue-dark);font-size:15px;';
-        header.innerText = '📁 ไม่พบรูปใน Index — เลือกโฟลเดอร์เพื่อค้นหาต่อ';
+        header.innerText = res.message || '📁 ไม่พบรูปใน Index — เลือกโฟลเดอร์เพื่อค้นหาต่อ';
         container.appendChild(header);
 
         if (res.folders && res.folders.length > 0) {
@@ -1900,8 +2253,20 @@ function checkSiteActive() {
         countBar.innerText = 'พบ ' + res.files.length + ' รูป — เลื่อนดูได้เลย';
         container.appendChild(countBar);
 
+        var lastGroup = null;
         for (var i = 0; i < res.files.length; i++) {
           var file = res.files[i];
+
+          // ค้นแค่ชนิดสินค้า → คั่นหัวข้อตามยี่ห้อ
+          if (res.grouped && file.group !== lastGroup) {
+            lastGroup = file.group;
+            var groupCount = res.files.filter(function(f) { return f.group === lastGroup; }).length;
+            var groupHead = document.createElement('div');
+            groupHead.style.cssText = 'padding:12px 2px 6px;font-weight:800;color:var(--blue-dark);font-size:14px;';
+            groupHead.innerText = '🏷️ ' + lastGroup + ' (' + groupCount + ' รูป)';
+            container.appendChild(groupHead);
+          }
+
           var card = document.createElement('div');
           card.className = 'img-card';
 
