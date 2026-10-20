@@ -1216,7 +1216,8 @@ function srBuildIndex(rows) {
       var firstRaw = raw.split(/\s+/)[0];
       var first = srAliasText((firstRaw));
       var line = { row: ri, raw: raw, firstRaw: firstRaw, first: first,
-                   norm: srAliasText((raw)), sizes: srExtractSizes(raw).sizes };
+                   // ตัดขนาดออกจากข้อความที่ใช้เทียบ (prompt ใหม่ต่อท้ายขนาด) — ขนาดเทียบแยกใน sizes
+                   norm: srAliasText(srExtractSizes(raw).rest), sizes: srExtractSizes(raw).sizes };
       lines.push(line);
       if (first) firstCount[first] = (firstCount[first] || 0) + 1;
     });
@@ -1250,6 +1251,10 @@ function srParseQuery(keyword, idx) {
   var tokens = sz.rest
     .replace(/\d+\s*[xX×]\s*\d+/g, ' ')                  // 1X12, 3x4 (จำนวนแพ็ก ไม่ใช่ขนาด)
     .replace(/\d+\s*(ก|กร|กรั|มิ|มล|m)(?=\s|$)/gi, ' ')    // ขนาดที่ถูกตัดท้ายชื่อในระบบ (65ก, 385กรั)
+    // จำนวนบรรจุ (25 ซอง, 6 ม้วน, แพ็ค 3) — ป้าย/OCR มักไม่เขียน ทำให้คะแนนตรงต่ำ
+    .replace(/\d+\s*(ซอง|ชิ้น|ม้วน|แผ่น|ห่อ|ถุง|ขวด|กระป๋อง|ลูก|ตัว|คู่|กล่อง|แพ็ค|แพ็ก|แพค)/g, ' ')
+    .replace(/(แพ็ค|แพ็ก|แพค|pack)\s*\d+/gi, ' ')
+    .replace(/3\s*(อิน|in)\s*1/gi, ' ')                  // 3อิน1 / 3in1 — บางป้ายเขียน บางป้ายไม่เขียน
     .replace(/[(),"\\]/g, ' ')
     .split(/\s+/)
     .filter(function(t) { return t && SR_NOISE_WORDS.indexOf(t.toLowerCase().replace(/\.$/, '')) === -1; });
@@ -1306,7 +1311,7 @@ function srFuzzyContains(pat, text, maxDist) {
   return false;
 }
 
-function srMatchLine(line, q, ignoreBrand, minCoverage) {
+function srMatchLine(line, q, ignoreBrand, minCoverage, ignoreSize) {
   var need = q.norm, brandHit = null;
   if (q.brands.length && !ignoreBrand) {
     var looseFirst = srLoose(line.first), looseLine = srLoose(line.norm), lineBrand = '';
@@ -1348,7 +1353,7 @@ function srMatchLine(line, q, ignoreBrand, minCoverage) {
         if (Math.abs(a.val - s.val) < 0.01) sizeMatch = true;
       });
     });
-    if (sameKind && !sizeMatch) return null;
+    if (sameKind && !sizeMatch && !ignoreSize) return null;
   }
   return { score: cov + (sizeMatch ? 0.5 : 0), line: line };
 }
@@ -1389,10 +1394,10 @@ function srSearch(idx, keyword) {
   if (!q.norm && !q.sizes.length) return { success: true, usedFallback: false, files: [] };
 
   // หาบรรทัดที่ดีที่สุดของแต่ละรูป
-  var findBest = function(minCoverage) {
+  var findBest = function(minCoverage, ignoreSize) {
     var out = {};
     idx.lines.forEach(function(line) {
-      var m = srMatchLine(line, q, false, minCoverage);
+      var m = srMatchLine(line, q, false, minCoverage, ignoreSize);
       if (m && (!out[line.row] || m.score > out[line.row].score)) out[line.row] = m;
     });
     return out;
@@ -1400,6 +1405,13 @@ function srSearch(idx, keyword) {
   var best = findBest(null);
   var hitRows = Object.keys(best).map(Number);
   var isNear = false;
+
+  // ตรงทุกอย่างแต่ขนาดไม่ตรง (OCR อาจอ่านขนาดผิด) → แสดงเป็นผลใกล้เคียง ดีกว่าหาไม่เจอ
+  if (hitRows.length === 0 && q.sizes.length) {
+    best = findBest(null, true);
+    hitRows = Object.keys(best).map(Number);
+    isNear = hitRows.length > 0;
+  }
 
   // ไม่เจอ และคำค้นไม่มียี่ห้อ (เช่น ชื่อในระบบไม่มียี่ห้อ) → แสดงผลใกล้เคียงแทนหน้าว่าง
   if (hitRows.length === 0 && q.brands.length === 0) {
