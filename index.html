@@ -1142,7 +1142,8 @@ var SR_BRAND_ALIASES = [
   ['TP', 'ทรูพี'],
   ['ซีเค', 'CK'],
   ['TFG', 'ไทยฟู้ดส์', 'ทีเอฟจี'],
-  ['คิงส์เชฟ', 'คิงเชฟ']
+  ['คิงส์เชฟ', 'คิงเชฟ'],
+  ['มาลี', 'ลี']                       // ทะเบียนยี่ห้อ: ลี = มาลี (ป้ายเขียน ลี) — ตัวย่อสั้นแทนเฉพาะคำเดี่ยว
 ];
 
 // ทะเบียนยี่ห้อจากไฟล์ รายการสินค้า_แยกยี่ห้อ_ชนิด_ขนาด_OCR.xlsx (636 ชื่อ, 23 ต.ค. 2026)
@@ -1270,7 +1271,8 @@ function srAliasText(text) {
       var a = srAliasList[i];
       if (a.from.length > 3) continue;
       if (n === a.from) return a.to;
-      if (n.indexOf(a.from) === 0 && !/[a-z0-9]/.test(n.charAt(a.from.length))) return a.to + n.substr(a.from.length);
+      // ติดหน้าคำได้เฉพาะตัวย่ออังกฤษ (WDไส้เป็ด) — ตัวย่อไทยต้องตรงทั้งคำ (ลี ≠ ลีลา)
+      if (/^[a-z0-9]+$/.test(a.from) && n.indexOf(a.from) === 0 && !/[a-z0-9]/.test(n.charAt(a.from.length))) return a.to + n.substr(a.from.length);
     }
     return n;
   }).join('');
@@ -1366,6 +1368,11 @@ function srParseQuery(keyword, idx) {
     .split(/\s+/)
     .filter(function(t) { return t && SR_NOISE_WORDS.indexOf(t.toLowerCase().replace(/\.$/, '')) === -1; });
   var normTokens = tokens.map(function(t) { return srAliasText((t)); });
+  // "น้ำมันปาล์มตราหยก" → เพิ่ม "หยก" เป็นอีกคำ (ยี่ห้อที่อยู่หลัง "ตรา" กลางคำ)
+  normTokens.slice().forEach(function(t) {
+    var k = t.indexOf('ตรา');
+    if (k > 0 && t.length - k - 3 >= 2) normTokens.push(t.substr(k + 3));
+  });
   var norm = srAliasText((tokens.join(' ')));
 
   // หายี่ห้อในคำค้น: ยี่ห้อสั้น (≤3 ตัว) ต้องตรงทั้งคำ หรือเป็นอังกฤษที่เขียนติดหน้าคำไทย (TFGสเต็ก),
