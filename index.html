@@ -1308,6 +1308,9 @@ function srBuildIndex(rows) {
       var line = { row: ri, raw: raw, firstRaw: firstRaw, first: first,
                    // ตัดขนาดออกจากข้อความที่ใช้เทียบ (prompt ใหม่ต่อท้ายขนาด) — ขนาดเทียบแยกใน sizes
                    norm: srAliasText(srExtractSizes(raw).rest), sizes: srExtractSizes(raw).sizes };
+      // คำนวณแบบหลวมไว้ครั้งเดียว (เดิมคำนวณใหม่ทุกบรรทัดทุกครั้งที่ค้น)
+      line.looseFirst = srLoose(first.replace(/^ตรา/, ''));
+      line.looseNorm  = srLoose(line.norm.replace(/^ตรา/, ''));
       lines.push(line);
       if (first) firstCount[first] = (firstCount[first] || 0) + 1;
     });
@@ -1393,17 +1396,24 @@ function srShortBrandAt(token, b) {
 }
 
 // สัดส่วนของ "ชนิด+ส่วนขยาย" ในคำค้นที่พบในบรรทัด (เทียบทีละ 3 ตัวอักษร ทนพิมพ์ผิดเล็กน้อย)
+var srTrigramCache = {}, srTrigramCacheSize = 0;
 function srCoverage(need, body) {
   if (!need) return 1;
   if (need.length < 3) return body.indexOf(need) !== -1 ? 1 : 0;
-  var total = 0, hit = 0, seen = {};
-  for (var i = 0; i + 3 <= need.length; i++) {
-    var g = need.substr(i, 3);
-    if (seen[g]) continue;
-    seen[g] = true; total++;
-    if (body.indexOf(g) !== -1) hit++;
+  var grams = srTrigramCache[need];
+  if (!grams) {                                   // หั่นคำค้นทีละ 3 ตัวครั้งเดียว ใช้ซ้ำทุกบรรทัด
+    var seen = {};
+    grams = [];
+    for (var i = 0; i + 3 <= need.length; i++) {
+      var g = need.substr(i, 3);
+      if (!seen[g]) { seen[g] = true; grams.push(g); }
+    }
+    if (++srTrigramCacheSize > 5000) { srTrigramCache = {}; srTrigramCacheSize = 0; }
+    srTrigramCache[need] = grams;
   }
-  return hit / total;
+  var hit = 0;
+  for (var k = 0; k < grams.length; k++) if (body.indexOf(grams[k]) !== -1) hit++;
+  return hit / grams.length;
 }
 
 // pat อยู่ใน text โดยพิมพ์ต่างกันได้ไม่เกิน maxDist ตัวอักษร (edit distance เทียบช่วงที่ใกล้ที่สุดใน text)
@@ -1423,19 +1433,27 @@ function srFuzzyContains(pat, text, maxDist) {
   return false;
 }
 
+// กรองเร็วก่อนคำนวณ edit distance: ถ้าต่างกันแค่ 1 ตัว 2 ตัวแรกต้องตรงกันอย่างน้อย 1 ตำแหน่ง (หรือเลื่อน 1)
+function srMaybeOneEdit(a, b) {
+  var a0 = a.charAt(0), a1 = a.charAt(1), b0 = b.charAt(0), b1 = b.charAt(1);
+  return a0 === b0 || a1 === b1 || a0 === b1 || a1 === b0;
+}
+
 function srMatchLine(line, q, ignoreBrand, minCoverage, ignoreSize) {
   var need = q.norm, brandHit = null;
   if (q.brands.length && !ignoreBrand) {
     // OCR บางรูปเขียน "ตรา" นำหน้ายี่ห้อ (ตราหมี, ตราฉัตร) → ตัดออกก่อนเทียบ
-    var looseFirst = srLoose(line.first.replace(/^ตรา/, '')), looseLine = srLoose(line.norm.replace(/^ตรา/, '')), lineBrand = '';
+    var looseFirst = line.looseFirst, looseLine = line.looseNorm, lineBrand = '';
+    if (!q.looseBrands) q.looseBrands = q.brands.map(srLoose);
     for (var i = 0; i < q.brands.length; i++) {
-      var b = q.brands[i], lb = srLoose(b);
+      var b = q.brands[i], lb = q.looseBrands[i];
       var ok = b.length <= 3 ? srShortBrandAt(looseFirst, lb)
                              : (looseFirst.indexOf(lb) !== -1 ||
                                 // ยี่ห้อ 2 คำ (ด็อก เอ็นจอย): ยี่ห้อเริ่มตั้งแต่ต้นบรรทัดจนถึงต่อจากคำแรกพอดี
                                 (looseLine.indexOf(lb) !== -1 && looseLine.indexOf(lb) <= looseFirst.length) ||
                                 // ยี่ห้อยาว ≥5 ตัว: OCR อ่านเพี้ยนได้ 1 ตัวอักษร (เจอ์ไฮ / เจอร์ไฮ, แดงโม / แตงโม)
-                                (lb.length >= 5 && srFuzzyContains(lb, looseFirst.substr(0, lb.length + 1), 1)));
+                                (lb.length >= 5 && srMaybeOneEdit(lb, looseFirst) &&
+                                 srFuzzyContains(lb, looseFirst.substr(0, lb.length + 1), 1)));
       if (ok) { brandHit = b; lineBrand = line.first; break; }
     }
     if (!brandHit) return null;
@@ -1588,15 +1606,46 @@ function srFetchAllOcr(offset, acc, page) {
       return srFetchAllOcr(offset + rows.length, acc.concat(rows), page + 1);
     });
 }
+// เวลาอัปเดตล่าสุดของ ocr_cache (syncOcrCache ประทับ updated_at ทุกครั้ง) — คำขอเล็ก ไม่ถึง 1 KB
+var SR_REFRESH_MS = 30000;          // เช็คข้อมูลรูปใหม่ไม่ถี่กว่าทุก 30 วินาที
+var srIndexStamp = '', srIndexRowCount = 0, srLastCheck = 0, srCheckPromise = null;
+function srLatestStamp() {
+  return sbFetch('ocr_cache?select=updated_at&order=updated_at.desc.nullslast&limit=1').then(function(rows) {
+    return (Array.isArray(rows) && rows[0] && rows[0].updated_at) || '';
+  });
+}
+
 function srLoadIndex() {
+  // ครั้งแรก: โหลดทั้งหมด
   if (!srIndexPromise) {
-    srIndexPromise = srFetchAllOcr(0, [], 0).then(function(rows) {
-      if (rows.length === 0) throw new Error('ไม่มีข้อมูล OCR');
-      return srBuildIndex(rows);
-    });
+    srLastCheck = Date.now();
+    srIndexPromise = Promise.all([srLatestStamp().catch(function() { return ''; }), srFetchAllOcr(0, [], 0)])
+      .then(function(res) {
+        var rows = res[1];
+        if (rows.length === 0) throw new Error('ไม่มีข้อมูล OCR');
+        srIndexStamp = res[0]; srIndexRowCount = rows.length;
+        return srBuildIndex(rows);
+      });
     srIndexPromise.catch(function() { srIndexPromise = null; }); // ครั้งหน้าลองโหลดใหม่
+    return srIndexPromise;
   }
-  return srIndexPromise;
+  // ครั้งต่อไป: ถ้าเกิน 30 วินาทีจากที่เช็คล่าสุด → ถามว่ามีข้อมูลใหม่ไหม (มีแล้วค่อยโหลดใหม่)
+  if (srCheckPromise) return srCheckPromise;
+  if (Date.now() - srLastCheck < SR_REFRESH_MS) return srIndexPromise;
+  srLastCheck = Date.now();
+  var current = srIndexPromise;
+  srCheckPromise = srLatestStamp().then(function(stamp) {
+    if (!stamp || stamp === srIndexStamp) return current;
+    return srFetchAllOcr(0, [], 0).then(function(rows) {
+      // กันช่วง fullResync กำลังลบแล้วเขียนใหม่: ข้อมูลหายไปเกินครึ่ง = ยังเขียนไม่เสร็จ → ใช้ชุดเดิม ลองใหม่รอบหน้า
+      if (rows.length < srIndexRowCount * 0.5) return current;
+      srIndexStamp = stamp; srIndexRowCount = rows.length;
+      srIndexPromise = Promise.resolve(srBuildIndex(rows));
+      return srIndexPromise;
+    });
+  }).catch(function() { return current; })     // เช็คไม่สำเร็จ (เน็ตหลุด) → ใช้ชุดเดิม
+    .then(function(idx) { srCheckPromise = null; return idx; });
+  return srCheckPromise;
 }
 
 function searchDriveImageSupabase(keyword) {
