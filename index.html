@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ค้นหาโปรโมชั่น</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,400;0,800;1,900&family=Prompt:wght@800;900&display=swap" rel="stylesheet">
   
   <style>
     :root {
@@ -356,15 +357,6 @@
       width: 100%;
     }
 
-    .fallback-box {
-      background: var(--blue-light);
-      padding: 16px;
-      border-radius: var(--radius);
-      margin-top: 16px;
-      margin-bottom: 20px;
-      border: 1.5px dashed var(--blue);
-    }
-    .fallback-title { font-size: 13px; font-weight: 700; color: var(--blue-dark); margin-bottom: 10px; }
     .btn-folder {
       background: linear-gradient(135deg, var(--blue) 0%, var(--blue-mid) 100%);
       color: var(--white); border: none;
@@ -599,6 +591,34 @@
     .btn-reset  { background: #FFF3E0; color: #E65100; }
     .btn-edit   { background: var(--blue-light); color: var(--blue-dark); }
     .btn-delete { background: #ECEFF1; color: #607D8B; }
+
+    /* หน้าต่างแก้ไขผู้ใช้ (ปฏิทินวันหมดอายุ) */
+    #editUserModal {
+      display: none; position: fixed; inset: 0; z-index: 300;
+      background: rgba(0,0,0,0.55); padding: 16px; overflow-y: auto;
+      font-family: 'Sarabun', sans-serif;
+    }
+    #editUserModal.show { display: flex; align-items: flex-start; justify-content: center; }
+    .eu-box {
+      background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow);
+      width: 100%; max-width: 420px; margin-top: 40px; overflow: hidden;
+    }
+    .eu-box .admin-form label { font-size: 12px; font-weight: 700; color: var(--blue-dark); margin-bottom: -4px; }
+    .eu-help { font-size: 12px; color: var(--text-muted); margin-top: -4px; }
+    .eu-quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .eu-quick button {
+      padding: 10px 4px; border-radius: 8px; border: 2px solid var(--blue-light);
+      background: var(--blue-pale); color: var(--blue-dark);
+      font-size: 14px; font-weight: 800; font-family: 'Sarabun', sans-serif; cursor: pointer;
+    }
+    .eu-quick button:active { background: var(--blue-light); }
+    .eu-actions { display: flex; gap: 8px; }
+    .eu-actions .btn-admin-save { flex: 1; }
+    .eu-cancel {
+      flex: 0 0 auto; padding: 14px 18px; border-radius: 10px; border: none;
+      background: #ECEFF1; color: #607D8B; font-size: 15px; font-weight: 700;
+      font-family: 'Sarabun', sans-serif; cursor: pointer;
+    }
     .log-card {
       padding: 11px 16px; border-bottom: 1px solid var(--blue-light);
       display: flex; justify-content: space-between; align-items: center; gap: 8px;
@@ -822,6 +842,121 @@
     }
     #scanSection { padding-bottom: 80px; } /* กันปุ่มลอยบังปุ่มเปลี่ยนหน้า */
 
+    /* ════════════════════════════════════════════════
+       ★ PREMIUM: ป้ายตั้งกอง (สินค้าไม่มีโปร) — คลาสขึ้นต้น sg- ทั้งหมด
+       ════════════════════════════════════════════════ */
+    .pill-media { background: #FFF3E0; color: #E65100; }
+    .pill-media .pill-dot { background: #EF6C00; }
+    .list-item.has-media { border-color: #EF6C00; }
+    .list-item.has-media:active { background: #FFF3E0; }
+    .has-media .item-num { background: #FFF3E0; color: #E65100; }
+    .has-media .item-price { color: #E65100; }
+    .list-item.no-promo.signable { opacity: 1; }
+    .btn-sign-add {
+      margin-top: 8px; padding: 7px 12px; border: none; border-radius: 8px; cursor: pointer;
+      background: linear-gradient(135deg, #C62828 0%, #E53935 100%); color: #fff;
+      font-size: 13px; font-weight: 800; font-family: 'Sarabun', sans-serif;
+    }
+    .btn-sign-add.added { background: #ECEFF1; color: #546E7A; }
+    .btn-sign-add:active { opacity: 0.85; }
+    .sign-price-note { font-size: 12px; color: var(--text-muted); margin-left: 8px; }
+
+    #signFab {
+      display: none; position: fixed; z-index: 8000;
+      bottom: calc(18px + env(safe-area-inset-bottom)); right: 14px;
+      width: 58px; height: 58px; border-radius: 50%;
+      background: #C62828; color: #fff; border: 3px solid #fff;
+      font-size: 26px; line-height: 1; align-items: center; justify-content: center;
+      box-shadow: 0 4px 14px rgba(198,40,40,0.4); cursor: pointer;
+    }
+    #signFab.shift { right: 84px; } /* มีปุ่มรวมรูปอยู่ด้วย → ขยับซ้าย */
+    #signFab:active { transform: scale(0.95); }
+
+    #signModal {
+      display: none; position: fixed; inset: 0; z-index: 9500;
+      background: rgba(0,20,45,0.88); overflow-y: auto; padding: 12px;
+    }
+    .sg-panel { max-width: 560px; margin: 4px auto 40px; background: var(--white); border-radius: 14px; padding: 14px; }
+    .sg-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .sg-title { font-size: 16px; font-weight: 800; color: var(--blue-dark); }
+    .sg-opts { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .sg-seg { display: flex; border: 2px solid var(--blue-light); border-radius: 10px; overflow: hidden; flex: 1; min-width: 150px; }
+    .sg-seg button {
+      flex: 1; padding: 9px 6px; border: none; background: var(--white); color: var(--blue);
+      font-size: 14px; font-weight: 800; font-family: 'Sarabun', sans-serif; cursor: pointer;
+    }
+    .sg-seg button.on { background: var(--blue); color: #fff; }
+    .sg-hint { font-size: 12px; color: var(--text-muted); margin: 0 2px 10px; }
+    .sg-list { margin-bottom: 12px; }
+    .sg-row { display: flex; gap: 8px; padding: 8px; border: 1px solid var(--blue-light); border-radius: 10px; margin-bottom: 8px; }
+    .sg-row-n { font-weight: 800; color: var(--blue); min-width: 18px; padding-top: 6px; }
+    .sg-fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .sg-fields input[type="text"] { padding: 6px 8px; font-size: 14px; border-width: 1px; border-radius: 6px; }
+    .sg-lock { font-size: 13px; color: var(--text-muted); }
+    .sg-lock b { color: #C62828; font-size: 15px; }
+    .sg-row-btns { display: flex; flex-direction: column; gap: 6px; }
+    .sg-row-btns button {
+      width: 38px; height: 34px; border: none; border-radius: 8px; cursor: pointer;
+      font-size: 15px; font-weight: 800; font-family: 'Sarabun', sans-serif;
+    }
+    .sg-dup { background: var(--blue-light); color: var(--blue-dark); }
+    .sg-del { background: var(--danger-bg); color: var(--danger); }
+    .sg-preview-title { font-size: 13px; font-weight: 800; color: var(--blue-dark); margin: 4px 2px 8px; }
+    .sg-preview { background: #e9eef5; border-radius: 10px; padding: 10px; margin-bottom: 12px; overflow: hidden; }
+    .sg-scaler { transform-origin: top left; margin-bottom: 10px; }
+    .sg-actions { display: flex; gap: 8px; }
+    .sg-actions .btn-bm-print { background: linear-gradient(135deg, #C62828 0%, #E53935 100%); }
+
+    /* ── ป้าย (ขนาดจริงเป็น mm, ตัวอักษรอิงขนาดป้ายด้วย cqw/cqh) ── */
+    .sg-sheet { background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.18); display: flex; overflow: hidden; }
+    .sg-sheet.a4p { width: 210mm; height: 296mm; }
+    .sg-sheet.a4l { width: 297mm; height: 209mm; }
+    .sg-sheet.split-v { flex-direction: column; }
+    .sg-sheet.split-h { flex-direction: row; }
+    .sg-sheet > .sg-sign { flex: 1 1 0; }
+    .sg-sheet.split-v > .sg-sign + .sg-sign { border-top: 1px dashed #999; }
+    .sg-sheet.split-h > .sg-sign + .sg-sign { border-left: 1px dashed #999; }
+    .sg-sign { position: relative; overflow: hidden; background: #fff; container-type: size;
+               font-family: 'Kanit', 'Sarabun', sans-serif; color: #1a1a1a; }
+    .sg-sign.empty { background: #fff; }
+    .sg-logo { position: absolute; left: 4cqw; top: 3cqh; }
+    .sg-photo { position: absolute; display: flex; align-items: center; justify-content: center; }
+    .sg-photo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .sg-noimg { width: 100%; height: 100%; border: 2px dashed #c9c9c9; border-radius: 3cqmin; color: #aaa;
+                display: flex; align-items: center; justify-content: center; font-size: 5cqmin; font-weight: 400; }
+    .sg-text { position: absolute; line-height: 1.2; }
+    .sg-text > div { white-space: nowrap; overflow: hidden; }
+    .sg-brand { font-weight: 800; }
+    .sg-type, .sg-size { font-weight: 400; }
+    /* กล่องราคา: กรอบแดงมุมมน · ตัวเลข Prompt เหลือง ใหญ่ล้นกรอบนิด ๆ (ขนาดจริงคำนวณใน fitSignText) */
+    .sg-price { position: absolute; z-index: 2; background: #E30613; border-radius: 4cqmin;
+                box-shadow: 0 0.8cqmin 2cqmin rgba(0,0,0,.22); }
+    .sg-num { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%);
+              font-family: 'Prompt', 'Kanit', sans-serif; font-weight: 900; font-style: normal;
+              color: #FFE500; line-height: 1; white-space: nowrap; letter-spacing: -0.03em;
+              -webkit-text-stroke: 0.025em #9E0010; paint-order: stroke fill;
+              text-shadow: 0 0.04em 0 #9E0010, 0 0.07em 0.08em rgba(0,0,0,.25); }
+    .sg-num small { font-size: 0.3em; font-weight: 900; letter-spacing: 0; margin-left: 0.04em; }
+    .sg-foot { position: absolute; left: 0; bottom: 0; width: 100%; display: block; z-index: 1; }
+
+    /* ป้ายทรงตั้ง (แบบ B): A4 แนวตั้ง / ครึ่งของ A5 แนวนอน — รูปใหญ่ซ้าย · ชื่อชิดขวา · ราคาใต้ชื่อทับขอบรูป */
+    .sg-sign.tall .sg-logo  { width: 32cqw; }
+    .sg-sign.tall .sg-photo { left: 3cqw; top: 20cqh; width: 56cqw; height: 64cqh; }
+    .sg-sign.tall .sg-text  { right: 4cqw; top: 29cqh; width: 40cqw; text-align: right; }
+    .sg-sign.tall .sg-brand { font-size: 7cqw; }
+    .sg-sign.tall .sg-type, .sg-sign.tall .sg-size { font-size: 5.4cqw; }
+    .sg-sign.tall .sg-price { left: 54cqw; top: 52cqh; width: 40cqw; height: 17cqh; }
+
+    /* ป้ายทรงนอน (แบบ A): A4 แนวนอน / ครึ่งของ A5 แนวตั้ง — รูปกลางป้าย · ชื่อซ้ายล่าง · ราคาขวาทับขอบรูป */
+    .sg-sign.wide .sg-logo  { width: 21cqw; }
+    .sg-sign.wide .sg-photo { left: 29cqw; top: 6cqh; width: 42cqw; height: 72cqh; }
+    .sg-sign.wide .sg-text  { left: 4cqw; top: 48cqh; width: 26cqw; }
+    .sg-sign.wide .sg-brand { font-size: 4.6cqw; }
+    .sg-sign.wide .sg-type, .sg-sign.wide .sg-size { font-size: 3.5cqw; }
+    .sg-sign.wide .sg-price { left: 68cqw; top: 22cqh; width: 27cqw; height: 34cqh; }
+
+    #signPrint { display: none; }
+
     /* ════════════ PRINT: แผ่นรวม A4 ════════════ */
     #printSheet { display: none; }
     @media print {
@@ -834,6 +969,18 @@
       #loginSection, #adminSection,
       #appWrapper > .header, #appWrapper > .container,
       #basketMini, #basketModal, #cellOverlay, #printFab { display: none !important; }
+      /* ★ ป้ายตั้งกอง: พิมพ์เฉพาะตอน body มีคลาส print-signs (ไม่ชนแผ่นรวม 6 ช่อง) */
+      #signFab, #signModal { display: none !important; }
+      body:not(.print-signs) #signPrint { display: none !important; }
+      body.print-signs #printSheet { display: none !important; }
+      body.print-signs #signPrint { display: block !important; }
+      body.print-signs #signPrint .sg-sheet {
+        box-shadow: none; break-after: page; page-break-after: always; break-inside: avoid;
+      }
+      body.print-signs #signPrint .sg-sheet:last-child { break-after: auto; page-break-after: auto; }
+      body.print-signs .sg-sheet.split-v > .sg-sign + .sg-sign,
+      body.print-signs .sg-sheet.split-h > .sg-sign + .sg-sign { border-color: #bbb; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       /* กันทุก element สร้างหน้าใหม่ */
       #printSheet, #printSheet * {
         page-break-before: avoid !important;
@@ -889,6 +1036,29 @@
       <button class="admin-tab"        data-tab="logs"     onclick="switchTab('logs')">📋 Login Log</button>
     </div>
     <div id="adminContent"></div>
+
+    <!-- หน้าต่างแก้ไขผู้ใช้ / ต่ออายุ -->
+    <div id="editUserModal" onclick="if (event.target === this) closeEditUser()">
+      <div class="eu-box">
+        <div class="admin-section-title" id="euTitle">✏️ แก้ไขผู้ใช้</div>
+        <div class="admin-form">
+          <label for="euLabel">ชื่อสาขา / ผู้ใช้</label>
+          <input type="text" id="euLabel" autocomplete="off">
+          <label for="euExpiry">หมดอายุวันที่</label>
+          <input type="date" id="euExpiry">
+          <div class="eu-help" id="euHelp"></div>
+          <div class="eu-quick">
+            <button type="button" onclick="euAddMonths(1)">+1 เดือน</button>
+            <button type="button" onclick="euAddMonths(3)">+3 เดือน</button>
+            <button type="button" onclick="euAddMonths(12)">+1 ปี</button>
+          </div>
+          <div class="eu-actions">
+            <button type="button" class="eu-cancel" onclick="closeEditUser()">ยกเลิก</button>
+            <button type="button" class="btn-admin-save" id="euSave" onclick="saveEditUser()">💾 บันทึก</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ═══ APP WRAPPER ═══ -->
@@ -965,6 +1135,10 @@
               <span class="pill-dot"></span>
               <span>มีโปร <span id="sumPromo">0</span></span>
             </div>
+            <div class="pill pill-media" id="pillMedia" style="display:none">
+              <span class="pill-dot"></span>
+              <span>มีสื่อ <span id="sumMedia">0</span></span>
+            </div>
             <div class="pill pill-nopromo">
               <span class="pill-dot"></span>
               <span>ไม่มีโปร <span id="sumNoPromo">0</span></span>
@@ -990,13 +1164,6 @@
       <button class="btn-back" onclick="navBack()">⬅️ กลับไปหน้ารายการ</button>
       <div class="viewer-title" id="viewTitle">-</div>
       <div id="imgContainer"></div>
-
-      <div class="fallback-box">
-        <div class="fallback-title">💡 หารูปไม่เจอ? ค้นหาโฟลเดอร์ด้วยมือ</div>
-        <input type="text" id="manualKeyword" placeholder="พิมพ์ชื่อสินค้า (เช่น ซอสหอย)">
-        <button class="btn-folder" onclick="searchFolders()">📁 ค้นหาโฟลเดอร์</button>
-        <div id="folderResults" style="margin-top:12px;"></div>
-      </div>
     </div><!-- end viewerSection -->
 
   </div><!-- end container -->
@@ -1043,6 +1210,36 @@
   <!-- ═══ ★ แผ่นพิมพ์จริง (ซ่อนไว้ โผล่ตอน print) ═══ -->
   <div id="printSheet"></div>
 
+  <!-- ═══ ★ ป้ายตั้งกอง (Premium): ปุ่มลอย + หน้าสร้างป้าย + แผ่นพิมพ์จริง ═══ -->
+  <div id="signFab" onclick="openSignModal()">🏷️<span class="fab-count"><span id="signFabCount">0</span></span></div>
+  <div id="signModal">
+    <div class="sg-panel">
+      <div class="sg-head">
+        <span class="sg-title">🏷️ สร้างป้ายตั้งกอง (<span id="signCount">0</span> รายการ)</span>
+        <button class="btn-bm-close" onclick="navCloseLayer('signmodal')">✕</button>
+      </div>
+      <div class="sg-opts">
+        <div class="sg-seg" id="sgSizeSeg">
+          <button data-v="A4" onclick="setSignOpt('size','A4')">A4 เต็มแผ่น</button>
+          <button data-v="A5" onclick="setSignOpt('size','A5')">A5 (2 ป้าย/แผ่น)</button>
+        </div>
+        <div class="sg-seg" id="sgOrientSeg">
+          <button data-v="portrait" onclick="setSignOpt('orient','portrait')">แนวตั้ง</button>
+          <button data-v="landscape" onclick="setSignOpt('orient','landscape')">แนวนอน</button>
+        </div>
+      </div>
+      <p class="sg-hint">แก้ข้อความ ยี่ห้อ / ชนิด / ขนาด ได้ · ราคาใช้ราคาปกติจากระบบเท่านั้น · ⧉ = เพิ่มป้ายซ้ำ</p>
+      <div class="sg-list" id="signList"></div>
+      <div class="sg-preview-title">พรีวิวก่อนพิมพ์ (<span id="signSheetCount">0</span> แผ่น)</div>
+      <div class="sg-preview" id="signPreview"></div>
+      <div class="sg-actions">
+        <button class="btn-bm-clear" onclick="clearSignBasket()">🗑️</button>
+        <button class="btn-bm-print" onclick="printSigns()">🖨️ พิมพ์ป้าย</button>
+      </div>
+    </div>
+  </div>
+  <div id="signPrint"></div>
+
   </div><!-- end appWrapper -->
 
   <script>
@@ -1075,7 +1272,8 @@ function formatThaiDateRange(start, end) {
 // ── 1) ตรวจโปรจาก barcode ─────────────────────────────
 function searchMultipleProductsSupabase(barcodes, tomorrowMode) {
   var barcodeList = barcodes.map(function(b) { return '"' + b + '"'; }).join(',');
-  var path = 'promo_items?barcode=in.(' + barcodeList + ')&select=barcode,name,promo_price,start_date,end_date,keyword&limit=5000';
+  var path = 'promo_items?barcode=in.(' + barcodeList + ')&select=barcode,name,promo_price,start_date,end_date,keyword,' +
+             'normal_price,promo_qty,brand,product_type,size,image_url,unit,sku&limit=5000';
 
   return sbFetch(path).then(function(rows) {
     var promoMap = {};
@@ -1092,19 +1290,31 @@ function searchMultipleProductsSupabase(barcodes, tomorrowMode) {
       var start = new Date(promo.start_date + 'T00:00:00');
       var end   = new Date(promo.end_date   + 'T23:59:59');
 
+      // ★ ป้ายตั้งกอง: ข้อมูลราคาปกติ/ยี่ห้อ/ชนิด/ขนาด/รูป ของบาร์โค้ดนี้
+      var normal = (promo.normal_price === null || promo.normal_price === undefined) ? null : Number(promo.normal_price);
+      var sign = normal === null ? null : {
+        barcode: promo.barcode, name: promo.name, price: normal,
+        brand: promo.brand || '', type: promo.product_type || '', size: promo.size || '',
+        image: promo.image_url || '', unit: promo.unit || '', sku: promo.sku || ''
+      };
+
       if (checkDate >= start && checkDate <= end) {
+        // สื่อส่วนกลางราคาปกติ = ราคาโปร G เท่ากับราคาปกติ H และไม่มีจำนวนชิ้น Q (ไม่ใช่โปรแถม/ซื้อคู่)
+        // แถวที่ยังไม่มี H → ถือเป็นโปรเหมือนเดิม
+        var isMedia = normal !== null && Number(promo.promo_price) === normal && !(Number(promo.promo_qty) > 0);
         return {
           hasPromo:   true,
+          isMedia:    isMedia,
           name:       promo.name,
           keyword:    promo.keyword,
           isTomorrow: tomorrowMode,
           periodText: formatThaiDateRange(promo.start_date, promo.end_date),
-          price:      Number(promo.promo_price).toFixed(2),
+          price:      Number(isMedia ? normal : promo.promo_price).toFixed(2),
           status:     ''
         };
       } else {
         var status = checkDate < start ? 'ยังไม่ถึงช่วงโปร' : 'ไม่มีโปรโมชั่น';
-        return { hasPromo: false, name: promo.name, status: status };
+        return { hasPromo: false, name: promo.name, status: status, sign: sign };
       }
     });
 
@@ -2142,13 +2352,56 @@ function checkSiteActive() {
       sbDeleteRow('access_codes?code=eq.' + encodeURIComponent(code))
         .then(function() { switchTab('users'); });
     }
+    // ── แก้ไขผู้ใช้ / ต่ออายุ (หน้าต่างพร้อมปฏิทิน) ──
+    var euCode = null, euBase = null;
+
+    // Date → 'YYYY-MM-DD' ตามเวลาเครื่อง (ไม่ใช้ toISOString เพราะจะเพี้ยนเป็น UTC)
+    function euYmd(d) {
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
     function editUser(code, label, expiresAt) {
-      var newLabel = prompt('ชื่อสาขา / ผู้ใช้:', label);
-      if (newLabel === null) return;
-      var newExpiry = prompt('วันหมดอายุ (YYYY-MM-DD):', expiresAt);
-      if (!newExpiry) return;
-      sbPatch('access_codes?code=eq.' + encodeURIComponent(code), { label: newLabel, expires_at: newExpiry })
-        .then(function() { switchTab('users'); });
+      euCode = code;
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      var old = expiresAt ? new Date(expiresAt + 'T00:00:00') : null;
+      // ปุ่ม +เดือน นับต่อจากวันหมดอายุเดิม — ถ้าหมดไปแล้ว นับจากวันนี้
+      euBase = (old && !isNaN(old) && old > today) ? old : today;
+      document.getElementById('euTitle').textContent = '✏️ แก้ไข ' + code;
+      document.getElementById('euLabel').value = label || '';
+      document.getElementById('euExpiry').value = expiresAt || euYmd(today);
+      document.getElementById('euHelp').textContent = (old && !isNaN(old))
+        ? 'วันหมดอายุเดิม: ' + formatThaiDate(expiresAt) + ' — ปุ่มด้านล่างนับต่อจาก ' + formatThaiDate(euYmd(euBase))
+        : 'ปุ่มด้านล่างนับจากวันนี้';
+      document.getElementById('euSave').disabled = false;
+      document.getElementById('editUserModal').classList.add('show');
+    }
+
+    function euAddMonths(n) {
+      var b = euBase;
+      var d = new Date(b.getFullYear(), b.getMonth() + n, 1);
+      var lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      d.setDate(Math.min(b.getDate(), lastDay)); // 31 ม.ค. +1 เดือน → 28/29 ก.พ.
+      document.getElementById('euExpiry').value = euYmd(d);
+    }
+
+    function closeEditUser() {
+      document.getElementById('editUserModal').classList.remove('show');
+      euCode = null;
+    }
+
+    function saveEditUser() {
+      if (!euCode) return;
+      var newLabel = document.getElementById('euLabel').value.trim();
+      var newExpiry = document.getElementById('euExpiry').value;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(newExpiry)) { alert('กรุณาเลือกวันหมดอายุ'); return; }
+      var btn = document.getElementById('euSave');
+      btn.disabled = true;
+      sbPatch('access_codes?code=eq.' + encodeURIComponent(euCode), { label: newLabel, expires_at: newExpiry })
+        .then(function(r) {
+          if (r && r.ok === false) throw new Error('HTTP ' + r.status);
+          closeEditUser(); switchTab('users');
+        })
+        .catch(function(e) { btn.disabled = false; alert('บันทึกไม่สำเร็จ: ' + e.message); });
     }
     function addUser() {
       var code   = (document.getElementById('newCode').value || '').trim().toUpperCase();
@@ -2275,12 +2528,15 @@ function checkSiteActive() {
       currentPage = 1;
 
       var total = allItems.length;
-      var promoCount = 0, noPromoCount = 0;
+      var promoCount = 0, noPromoCount = 0, mediaCount = 0;
       for (var i = 0; i < allItems.length; i++) {
-        if (allItems[i].hasPromo) promoCount++; else noPromoCount++;
+        if (allItems[i].isMedia) mediaCount++;
+        else if (allItems[i].hasPromo) promoCount++; else noPromoCount++;
       }
       document.getElementById('sumTotal').innerText   = total;
       document.getElementById('sumPromo').innerText   = promoCount;
+      document.getElementById('sumMedia').innerText   = mediaCount;
+      document.getElementById('pillMedia').style.display = mediaCount ? '' : 'none';
       document.getElementById('sumNoPromo').innerText = noPromoCount;
       document.getElementById('summaryBar').classList.add('show');
       document.getElementById('listHeader').style.display = 'block';
@@ -2307,7 +2563,7 @@ function checkSiteActive() {
         var div = document.createElement('div');
 
         if (item.hasPromo) {
-          div.className = 'list-item has-promo';
+          div.className = 'list-item has-promo' + (item.isMedia ? ' has-media' : '');
           div.setAttribute('data-keyword', item.keyword);
           div.setAttribute('data-name', item.name);
           div.onclick = (function(n, k) {
@@ -2317,17 +2573,20 @@ function checkSiteActive() {
             '<div class="item-num">' + globalNum + '</div>' +
             '<div class="item-body">' +
               '<div class="item-name">' + item.name + '</div>' +
-              '<div class="item-status">✔️ ' + (item.isTomorrow ? 'มีโปรพรุ่งนี้ — แตะเพื่อดูรูป' : 'แตะเพื่อดูรูปโปรโมชั่น') + '</div>' +
+              (item.isMedia
+                ? '<div class="item-status">📄 ' + (item.isTomorrow ? 'มีสื่อส่วนกลางพรุ่งนี้ (ราคาปกติ) — แตะเพื่อดูรูป' : 'มีสื่อส่วนกลาง (ราคาปกติ) — แตะเพื่อดูรูป') + '</div>'
+                : '<div class="item-status">✔️ ' + (item.isTomorrow ? 'มีโปรพรุ่งนี้ — แตะเพื่อดูรูป' : 'แตะเพื่อดูรูปโปรโมชั่น') + '</div>') +
               '<div class="item-period">📅 ' + item.periodText + '</div>' +
             '</div>' +
             '<div class="item-price">฿' + item.price + '</div>';
         } else {
-          div.className = 'list-item no-promo';
+          div.className = 'list-item no-promo' + (item.sign && isPremiumSession() ? ' signable' : '');
           div.innerHTML =
             '<div class="item-num">' + globalNum + '</div>' +
             '<div class="item-body">' +
               '<div class="item-name">' + item.name + '</div>' +
               '<div class="item-status">❌ ' + item.status + '</div>' +
+              signButtonHtml(item, start + i) +
             '</div>';
         }
         listContainer.appendChild(div);
@@ -2417,8 +2676,6 @@ function checkSiteActive() {
         }
         document.getElementById('viewTitle').innerText = name;
         document.getElementById('imgContainer').innerHTML = '';
-        document.getElementById('folderResults').innerHTML = '';
-        document.getElementById('manualKeyword').value = keyword;
 
         showLoading('🔍 กำลังค้นหารูปโปรโมชั่น โปรดรอสักครู่...');
         searchDriveImageSupabase(keyword)
@@ -2539,35 +2796,6 @@ function checkSiteActive() {
       }
     }
 
-    // ─── Folder Search ─────────────────────────────────────
-    function searchFolders() {
-      var keyword = document.getElementById('manualKeyword').value.trim();
-      if (!keyword) return;
-      document.getElementById('folderResults').innerHTML = '';
-      showLoading('📁 กำลังสแกนหาโฟลเดอร์ โปรดรอสักครู่...');
-      searchFolderFallbackSupabase(keyword)
-    .then(renderFolders)
-    .catch(function(e) { hideLoading(); alert('เกิดข้อผิดพลาด: ' + e.toString()); });
-    }
-
-    function renderFolders(res) {
-      hideLoading();
-      var container = document.getElementById('folderResults');
-      if (res.success && res.folders.length > 0) {
-        for (var i = 0; i < res.folders.length; i++) {
-          var f = res.folders[i];
-          var a = document.createElement('a');
-          a.href = f.url;
-          a.target = '_blank';
-          a.className = 'folder-link';
-          a.innerHTML = '📁 ' + f.name;
-          container.appendChild(a);
-        }
-      } else {
-        container.innerHTML = '<p style="color:var(--text-muted);text-align:center;">ไม่พบโฟลเดอร์ที่มีคำนี้</p>';
-      }
-    }
-
     // ─── ท่าไม้ตาย ─────────────────────────────────────────
     function toggleFolderBomb() {
       var body  = document.getElementById('folderBombBody');
@@ -2639,7 +2867,9 @@ function checkSiteActive() {
     }
         // ปิดป๊อปอัปจากในโค้ด/ปุ่ม ✕ → ปิดทันที แล้วถอยประวัติให้ตรง
     function navCloseLayer(kind) {
-      if (kind === 'overlay') closeCellOverlay(); else closeBasketModal();
+      if (kind === 'overlay') closeCellOverlay();
+      else if (kind === 'signmodal') closeSignModal();
+      else closeBasketModal();
       if (history.state && history.state.pf === kind) history.back();
     }
     window.addEventListener('popstate', function(e) {
@@ -2648,7 +2878,7 @@ function checkSiteActive() {
       var st = e.state || {};
 
       // เดินหน้า (forward) เข้าป๊อปอัป → ไม่เปิดซ้ำ แค่ปรับสถานะให้ตรงจอ
-      if (st.pf === 'overlay' || st.pf === 'modal') {
+      if (st.pf === 'overlay' || st.pf === 'modal' || st.pf === 'signmodal') {
         history.replaceState({ pf: isViewerOpen() ? 'viewer' : 'scan' }, '');
         return;
       }
@@ -2656,6 +2886,7 @@ function checkSiteActive() {
       // ปิดป๊อปอัปที่ค้างอยู่ (ชั้นบนสุด)
       closeCellOverlay();
       closeBasketModal();
+      closeSignModal();
 
       if (st.pf === 'viewer') {
         if (!isViewerOpen()) history.replaceState({ pf: 'scan' }, ''); // forward กลับ viewer → ไม่เปิดซ้ำ
@@ -2797,6 +3028,7 @@ function checkSiteActive() {
       mini.style.display = (hasItems && viewerOpen)  ? 'block' : 'none';
       fab.style.display  = (hasItems && !viewerOpen) ? 'flex'  : 'none';
       document.getElementById('fabCount').innerText  = mergeBasket.length;
+      renderSignFab(); // ★ ปุ่มลอยป้ายตั้งกอง สลับตามหน้าเดียวกัน
       document.getElementById('miniCount').innerText = mergeBasket.length;
 
       // ── แผ่น A4 ย่อ (มุมลอย) — 6 ช่องเรียงตามตำแหน่งพิมพ์จริง ──
@@ -2876,6 +3108,10 @@ function checkSiteActive() {
     // ── พิมพ์: สร้างแผ่น A4 6 ช่องจาก full-res แล้ว window.print() ──
     function printBasket() {
       if (mergeBasket.length === 0) return;
+      // ★ กันโหมดพิมพ์ป้ายตั้งกองค้าง (มือถือบางรุ่นไม่ยิง afterprint)
+      document.body.classList.remove('print-signs');
+      var sgPage = document.getElementById('sgPageStyle');
+      if (sgPage) sgPage.textContent = '';
       // ปิดโมดัลก่อนพิมพ์ กัน overlay ติดในภาพพิมพ์ (+ ถอยประวัติให้ตรง)
       navCloseLayer('modal');
       var sheet = document.getElementById('printSheet');
@@ -2915,6 +3151,325 @@ function checkSiteActive() {
       });
       // safety: ถ้ารูปค้างเกิน 4 วิ พิมพ์เลย
       setTimeout(tryPrint, 4000);
+    }
+
+    /* ════════════════════════════════════════════════════
+       ★ PREMIUM FEATURE: ป้ายตั้งกอง (สินค้าไม่มีโปร / ยังไม่ถึงช่วงโปร)
+       - ราคา = ราคาปกติ (H) ล็อก แก้ไม่ได้ · ยี่ห้อ/ชนิด/ขนาด (V/W/X) แก้ได้ในหน้าพรีวิว
+       - หน่วยใหญ่: บาร์โค้ดที่ราคาปกติไม่ใช่ต่ำสุดใน SKU เดียวกัน → ต่อท้าย (ยกลัง) ฯลฯ
+       - A4 = 1 ป้าย/แผ่น · A5 = A4 แบ่งครึ่ง 2 ป้าย/แผ่น (เลขคี่ → ช่องสุดท้ายว่าง)
+       - state ชั่วคราว (refresh หาย) เหมือนตะกร้ารวมรูป
+       ════════════════════════════════════════════════════ */
+    var SIGN_LOGO = 'TFMlogo.png';
+    var SIGN_FOOTER = 'sign-footer.jpg';
+    var SIGN_MAX = 40;
+    var signBasket = [];                 // [{ barcode, brand, type, size, price, image }]
+    var signOpts = { size: 'A4', orient: 'portrait' };
+    var SIGN_UNIT_WORDS = {
+      BOX: 'ยกลัง', CAR: 'ยกลัง', SAC: 'ยกกระสอบ',
+      PAC: 'ยกแพ็ค', PAK: 'ยกแพ็ค', PACK: 'ยกแพ็ค',
+      BAG: 'ยกถุง', TAY: 'ยกถาด', GAL: 'แกลลอน'
+    };
+
+    function signEsc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function signPriceText(p) {
+      var n = Number(p);
+      return Math.round(n) === n ? n.toLocaleString('en-US') : n.toFixed(2);
+    }
+    // ลิงก์ Drive (/file/d/ID, open?id=ID, ID ล้วน) → thumbnail · ลิงก์รูปตรงจากเว็บอื่นใช้ได้เลย
+    function signImageSrc(link) {
+      link = String(link || '').trim();
+      if (!link || link.charAt(0) === '#') return '';
+      var m = link.match(/\/file\/d\/([\w-]{20,})/) || link.match(/[?&]id=([\w-]{20,})/) || link.match(/^([\w-]{25,})$/);
+      if (m) return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1600';
+      return /^https?:\/\//i.test(link) ? link : '';
+    }
+    function isPremiumSession() {
+      var s = getSession();
+      return !!(s && s.premium);
+    }
+    function signInBasket(barcode) {
+      for (var i = 0; i < signBasket.length; i++) if (signBasket[i].barcode === barcode) return true;
+      return false;
+    }
+
+    // ปุ่ม 🏷️ ในแถวสินค้าไม่มีโปร (Premium + มีราคาปกติเท่านั้น)
+    function signButtonHtml(item, idx) {
+      if (!item.sign || !isPremiumSession()) return '';
+      var added = signInBasket(item.sign.barcode);
+      return '<button class="btn-sign-add' + (added ? ' added' : '') + '" ' +
+        'onclick="event.stopPropagation(); addToSign(' + idx + ', this)">' +
+        (added ? '✓ อยู่ในตะกร้าป้าย' : '🏷️ สร้างป้าย') + '</button>' +
+        '<span class="sign-price-note">ราคาปกติ ฿' + signPriceText(item.sign.price) + '</span>';
+    }
+
+    // หน่วยใหญ่? ดูทุกบาร์โค้ดใน SKU เดียวกัน: ราคาปกติต่ำสุด = ชิ้นเดี่ยว
+    function signUnitSuffix(sign) {
+      var word = SIGN_UNIT_WORDS[String(sign.unit || '').trim().toUpperCase()];
+      if (!word || !sign.sku) return Promise.resolve('');
+      return sbFetch('promo_items?sku=eq.' + encodeURIComponent(sign.sku) + '&select=barcode,normal_price&limit=50')
+        .then(function(rows) {
+          var min = null;
+          (rows || []).forEach(function(r) {
+            if (r.normal_price === null || r.normal_price === undefined) return;
+            var p = Number(r.normal_price);
+            if (min === null || p < min) min = p;
+          });
+          return (min !== null && Number(sign.price) > min) ? word : '';
+        })
+        .catch(function() { return ''; }); // เช็คไม่ได้ → ไม่ต่อท้าย (พนักงานพิมพ์เองได้)
+    }
+
+    function addToSign(idx, btn) {
+      var item = allItems[idx];
+      if (!item || !item.sign) return;
+      var s = item.sign;
+      if (signInBasket(s.barcode)) { openSignModal(); return; }
+      if (signBasket.length >= SIGN_MAX) { alert('ตะกร้าป้ายเต็ม ' + SIGN_MAX + ' รายการแล้ว'); return; }
+      if (btn) { btn.disabled = true; btn.innerText = '⏳ กำลังเพิ่ม...'; }
+      signUnitSuffix(s).then(function(word) {
+        var size = s.size;
+        if (word) size = size ? size + ' (' + word + ')' : word;
+        var hasParts = s.brand || s.type;
+        signBasket.push({
+          barcode: s.barcode,
+          brand: hasParts ? s.brand : '',
+          type:  hasParts ? s.type : s.name,
+          size:  size,
+          price: s.price,
+          image: s.image
+        });
+        renderPage(currentPage);
+        renderSignFab();
+      });
+    }
+
+    function renderSignFab() {
+      var fab = document.getElementById('signFab');
+      if (!fab) return;
+      var viewerOpen = document.getElementById('viewerSection').style.display === 'block';
+      var show = signBasket.length > 0 && !viewerOpen;
+      fab.style.display = show ? 'flex' : 'none';
+      fab.classList.toggle('shift', document.getElementById('printFab').style.display === 'flex');
+      document.getElementById('signFabCount').innerText = signBasket.length;
+    }
+
+    // ── หน้าสร้างป้าย (เช็คสิทธิ์พรีเมียมสดก่อนเปิด) ──
+    function openSignModal() {
+      if (signBasket.length === 0) return;
+      verifyPremiumLive().then(function(ok) {
+        if (!ok) {
+          signBasket = [];
+          renderSignFab();
+          if (allItems && allItems.length) renderPage(currentPage);
+          return;
+        }
+        document.getElementById('signModal').style.display = 'block';
+        if (!(history.state && history.state.pf === 'signmodal')) history.pushState({ pf: 'signmodal' }, '');
+        renderSignModal();
+      });
+    }
+    function closeSignModal() {
+      var m = document.getElementById('signModal');
+      if (m) m.style.display = 'none';
+    }
+    function clearSignBasket() {
+      if (signBasket.length === 0) return;
+      if (!confirm('ล้างตะกร้าป้ายทั้งหมด?')) return;
+      signBasket = [];
+      navCloseLayer('signmodal');
+      renderSignFab();
+      if (allItems && allItems.length) renderPage(currentPage);
+    }
+    function setSignOpt(key, val) {
+      signOpts[key] = val;
+      renderSignModal();
+    }
+
+    function renderSignModal() {
+      ['sgSizeSeg', 'sgOrientSeg'].forEach(function(id) {
+        var key = id === 'sgSizeSeg' ? 'size' : 'orient';
+        var btns = document.getElementById(id).querySelectorAll('button');
+        for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('on', btns[i].getAttribute('data-v') === signOpts[key]);
+      });
+      document.getElementById('signCount').innerText = signBasket.length;
+      var list = document.getElementById('signList');
+      var html = '';
+      signBasket.forEach(function(it, i) {
+        html += '<div class="sg-row">' +
+          '<div class="sg-row-n">' + (i + 1) + '</div>' +
+          '<div class="sg-fields">' +
+            '<input type="text" placeholder="ยี่ห้อ" value="' + signEsc(it.brand) + '" oninput="editSign(' + i + ',\'brand\',this.value)">' +
+            '<input type="text" placeholder="ชนิด" value="' + signEsc(it.type) + '" oninput="editSign(' + i + ',\'type\',this.value)">' +
+            '<input type="text" placeholder="ขนาด" value="' + signEsc(it.size) + '" oninput="editSign(' + i + ',\'size\',this.value)">' +
+            '<div class="sg-lock">ราคาปกติ <b>฿' + signPriceText(it.price) + '</b> 🔒 · ' + signEsc(it.barcode) + '</div>' +
+          '</div>' +
+          '<div class="sg-row-btns">' +
+            '<button class="sg-dup" title="เพิ่มป้ายซ้ำ" onclick="dupSign(' + i + ')">⧉</button>' +
+            '<button class="sg-del" title="ลบ" onclick="removeSign(' + i + ')">✕</button>' +
+          '</div>' +
+        '</div>';
+      });
+      list.innerHTML = html;
+      renderSignPreview();
+    }
+
+    var _signPreviewTimer = null;
+    function editSign(i, key, val) {
+      if (!signBasket[i]) return;
+      signBasket[i][key] = val;
+      clearTimeout(_signPreviewTimer);
+      _signPreviewTimer = setTimeout(renderSignPreview, 250);
+    }
+    function dupSign(i) {
+      if (signBasket.length >= SIGN_MAX) { alert('ตะกร้าป้ายเต็ม ' + SIGN_MAX + ' รายการแล้ว'); return; }
+      var c = JSON.parse(JSON.stringify(signBasket[i]));
+      signBasket.splice(i + 1, 0, c);
+      renderSignModal();
+      renderSignFab();
+    }
+    function removeSign(i) {
+      signBasket.splice(i, 1);
+      renderSignFab();
+      if (allItems && allItems.length) renderPage(currentPage);
+      if (signBasket.length === 0) { navCloseLayer('signmodal'); return; }
+      renderSignModal();
+    }
+
+    // ── สร้าง HTML ป้าย ──
+    function signHtml(it, shape) {
+      if (!it) return '<div class="sg-sign empty ' + shape + '"></div>';
+      var src = signImageSrc(it.image);
+      var photo = src
+        ? '<img src="' + signEsc(src) + '" alt="" onerror="this.parentNode.innerHTML=\'<div class=sg-noimg>No image</div>\'">'
+        : '<div class="sg-noimg">No image</div>';
+      return '<div class="sg-sign ' + shape + '">' +
+        '<img class="sg-logo" src="' + SIGN_LOGO + '" alt="">' +
+        '<div class="sg-photo">' + photo + '</div>' +
+        '<div class="sg-text">' +
+          (it.brand ? '<div class="sg-brand">' + signEsc(it.brand) + '</div>' : '') +
+          (it.type  ? '<div class="sg-type">'  + signEsc(it.type)  + '</div>' : '') +
+          (it.size  ? '<div class="sg-size">'  + signEsc(it.size)  + '</div>' : '') +
+        '</div>' +
+        '<div class="sg-price"><span class="sg-num">' + signPriceText(it.price) + '<small>.-</small></span></div>' +
+        '<img class="sg-foot" src="' + SIGN_FOOTER + '" alt="">' +
+      '</div>';
+    }
+    // แบ่งเป็นแผ่น: A4 = 1/แผ่น · A5 ตั้ง = A4 ตั้งแบ่งบน/ล่าง · A5 นอน = A4 นอนแบ่งซ้าย/ขวา
+    function signSheetsHtml(items, size, orient) {
+      var out = [], per = size === 'A5' ? 2 : 1;
+      for (var i = 0; i < items.length; i += per) {
+        if (size === 'A4') {
+          out.push('<div class="sg-sheet ' + (orient === 'portrait' ? 'a4p' : 'a4l') + '">' +
+                   signHtml(items[i], orient === 'portrait' ? 'tall' : 'wide') + '</div>');
+        } else if (orient === 'portrait') {
+          out.push('<div class="sg-sheet a4p split-v">' + signHtml(items[i], 'wide') + signHtml(items[i + 1], 'wide') + '</div>');
+        } else {
+          out.push('<div class="sg-sheet a4l split-h">' + signHtml(items[i], 'tall') + signHtml(items[i + 1], 'tall') + '</div>');
+        }
+      }
+      return out;
+    }
+    // ข้อความยาวเกินกรอบ → ย่อตัวอักษรทีละ 4% (ไม่ตัดกลางคำ)
+    function fitSignText(root) {
+      var lines = root.querySelectorAll('.sg-text > div');
+      for (var i = 0; i < lines.length; i++) {
+        var el = lines[i], g = 0;
+        el.style.fontSize = '';
+        var fs = parseFloat(getComputedStyle(el).fontSize);
+        while (el.scrollWidth > el.clientWidth + 1 && g++ < 40) { fs *= 0.96; el.style.fontSize = fs + 'px'; }
+      }
+      // ตัวเลขราคา: ขยายให้กว้างกว่ากรอบ ~10% (ล้นกรอบนิด ๆ) แต่สูงไม่เกินกรอบ ~1.1 เท่า
+      var prices = root.querySelectorAll('.sg-num');
+      for (var j = 0; j < prices.length; j++) {
+        var sp = prices[j], box = sp.parentNode;
+        sp.style.fontSize = '100px';
+        var w100 = sp.offsetWidth;
+        if (!w100 || !box.clientWidth) continue;
+        var byWidth  = 100 * (box.clientWidth * 1.08) / w100;
+        var byHeight = box.clientHeight * 0.95;
+        sp.style.fontSize = Math.min(byWidth, byHeight) + 'px';
+      }
+    }
+    function renderSignPreview() {
+      var wrap = document.getElementById('signPreview');
+      var sheets = signSheetsHtml(signBasket, signOpts.size, signOpts.orient);
+      document.getElementById('signSheetCount').innerText = sheets.length;
+      wrap.innerHTML = sheets.map(function(s) { return '<div class="sg-scaler">' + s + '</div>'; }).join('');
+      fitSignText(wrap);
+      scaleSignPreview();
+    }
+    function scaleSignPreview() {
+      var wrap = document.getElementById('signPreview');
+      if (!wrap || !wrap.offsetWidth) return;
+      var avail = wrap.clientWidth - 20;
+      var scs = wrap.querySelectorAll('.sg-scaler');
+      for (var i = 0; i < scs.length; i++) {
+        var sheet = scs[i].firstElementChild;
+        var w = sheet.offsetWidth, h = sheet.offsetHeight, k = Math.min(1, avail / w);
+        scs[i].style.transform = 'scale(' + k + ')';
+        scs[i].style.width = w + 'px';
+        scs[i].style.height = (h * k) + 'px';
+      }
+    }
+    window.addEventListener('resize', function() {
+      if (document.getElementById('signModal').style.display === 'block') scaleSignPreview();
+    });
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function() {
+        if (document.getElementById('signModal').style.display === 'block') renderSignPreview();
+      });
+    }
+
+    // ── พิมพ์: ก๊อปแผ่นจากพรีวิว (ขนาดตัวอักษรที่ย่อแล้วติดไปด้วย) → ตั้งหน้ากระดาษ → print ──
+    function printSigns() {
+      if (signBasket.length === 0) return;
+      verifyPremiumLive().then(function(ok) {
+        if (!ok) { navCloseLayer('signmodal'); signBasket = []; renderSignFab(); return; }
+        renderSignPreview();
+        var out = document.getElementById('signPrint');
+        out.innerHTML = '';
+        var sheets = document.querySelectorAll('#signPreview .sg-sheet');
+        for (var i = 0; i < sheets.length; i++) out.appendChild(sheets[i].cloneNode(true));
+
+        var pageStyle = document.getElementById('sgPageStyle');
+        if (!pageStyle) {
+          pageStyle = document.createElement('style');
+          pageStyle.id = 'sgPageStyle';
+          document.head.appendChild(pageStyle);
+        }
+        pageStyle.textContent = '@media print { @page { size: A4 ' +
+          (signOpts.orient === 'portrait' ? 'portrait' : 'landscape') + '; margin: 0; } }';
+        document.body.classList.add('print-signs');
+
+        var cleaned = false;
+        function cleanup() {
+          if (cleaned) return;
+          cleaned = true;
+          document.body.classList.remove('print-signs');
+          pageStyle.textContent = '';
+          window.removeEventListener('afterprint', cleanup);
+        }
+        window.addEventListener('afterprint', cleanup);
+
+        // รอรูปโหลดก่อนสั่งพิมพ์ (สูงสุด 5 วิ)
+        var imgs = out.querySelectorAll('img'), left = imgs.length, done = false;
+        function go() {
+          if (done) return;
+          done = true;
+          setTimeout(function() { window.print(); }, 200);
+        }
+        if (!left) { go(); return; }
+        for (var j = 0; j < imgs.length; j++) {
+          if (imgs[j].complete) { if (--left <= 0) go(); }
+          else imgs[j].onload = imgs[j].onerror = function() { if (--left <= 0) go(); };
+        }
+        setTimeout(go, 5000);
+      });
     }
   </script>
 </body>
