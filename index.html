@@ -3444,17 +3444,10 @@ function checkSiteActive() {
         }
         pageStyle.textContent = '@media print { @page { size: A4 ' +
           (signOpts.orient === 'portrait' ? 'portrait' : 'landscape') + '; margin: 0; } }';
+        // โหมดพิมพ์ป้ายค้างไว้ (มีผลเฉพาะตอนพิมพ์) — ห้ามล้างตอน afterprint:
+        // Chrome Android ยิง afterprint ทันทีก่อนสร้างภาพพิมพ์เสร็จ → ได้กระดาษเปล่า
+        // printBasket() เป็นคนล้างคลาสนี้ก่อนพิมพ์แผ่นรวมเอง
         document.body.classList.add('print-signs');
-
-        var cleaned = false;
-        function cleanup() {
-          if (cleaned) return;
-          cleaned = true;
-          document.body.classList.remove('print-signs');
-          pageStyle.textContent = '';
-          window.removeEventListener('afterprint', cleanup);
-        }
-        window.addEventListener('afterprint', cleanup);
 
         // รอรูปโหลดก่อนสั่งพิมพ์ (สูงสุด 5 วิ)
         var imgs = out.querySelectorAll('img'), left = imgs.length, done = false;
